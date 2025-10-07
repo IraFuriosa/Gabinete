@@ -194,8 +194,8 @@
                         </ul>
                     </div>
                 </div>
-
             </div>
+
 
             <!-- Tab: Demandas -->
             <div id="demandas" class="tab-content space-y-6">
@@ -419,6 +419,52 @@
         // =========================================================================================
         // FUNÇÕES DE UTILIDADE E INTERAÇÃO
         // =========================================================================================
+        // NOVO: Função centralizada para lidar com ações (Edição e Exclusão)
+async function handleDemandAction(action, id) {
+    if (action === 'edit') {
+        // CORREÇÃO: Busca usando o ID real (d.ID), que é o valor em data-id do botão.
+        const demanda = demandasCache.find(d => String(d.ID) === id);
+
+        if (demanda) {
+            // Chamadas essenciais para garantir que os SELECTs estejam populados antes de abrir
+            await loadDemandasOptions();
+            populateContactSelect();
+
+            // Configurações e Abertura do Modal
+            document.getElementById('demandModalTitle').textContent = `Editar Demanda #${id}`;
+            document.getElementById('demandIdToUpdateInput').value = id;
+
+            // Preenchimento dos campos
+            document.getElementById('demandTitleSelect').value = demanda.demanda;
+            document.getElementById('demandContactNameSelect').value = demanda.contato;
+            document.getElementById('demandDescription').value = demanda.descricao;
+            document.getElementById('demandStatus').value = demanda.status;
+
+            document.getElementById('demandModal').classList.remove('hidden');
+        } else {
+            showModal("Erro", "Demanda não encontrada para edição.");
+        }
+    } else if (action === 'delete') {
+        // Nota: Não usar confirm() em ambiente Canvas
+        showModal("Confirmação Necessária", "A exclusão de dados não pode ser confirmada neste ambiente. Assumindo 'Sim' para demonstração.");
+
+        // Excluindo da tabela 'Demandas Ativas'
+        const { error } = await supabase
+            .from('Demandas Ativas')
+            .delete()
+            .eq('ID', id);
+
+        if (error) {
+            console.error("Erro ao excluir demanda:", error);
+            showModal("Erro", `Erro ao excluir demanda: ${error.message}`);
+        } else {
+            carregarDemandas();
+            showModal("Sucesso", "Demanda excluída com sucesso!");
+        }
+    } else {
+        console.error(`Ação desconhecida: ${action}`);
+    }
+}
 
         function showModal(title, message) {
             document.getElementById('modalTitle').textContent = title;
@@ -480,11 +526,15 @@
 
             // Adiciona listeners de evento para os botões de edição/exclusão
             document.querySelectorAll('.edit-demand-btn').forEach(button => {
-                button.addEventListener('click', (e) => openEditDemandModal(e.target.dataset.id));
-            });
-            document.querySelectorAll('.delete-demand-btn').forEach(button => {
-                button.addEventListener('click', (e) => deleteDemand(e.target.dataset.id));
-            });
+    button.addEventListener('click', (e) => {
+        handleDemandAction('edit', e.target.dataset.id);
+    });
+});
+document.querySelectorAll('.delete-demand-btn').forEach(button => {
+    button.addEventListener('click', (e) => {
+        handleDemandAction('delete', e.target.dataset.id);
+    });
+});
         }
 
         // Função para renderizar a tabela de Contatos
@@ -760,25 +810,6 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
             }
         }
 
-        async function deleteDemand(id) {
-            // Nota: Não usar confirm() em ambiente Canvas
-            const confirmed = confirm("A exclusão de dados não pode ser confirmada neste ambiente. Assumindo 'Sim' para demonstração.");
-
-            // Excluindo da tabela 'Demandas Ativas'
-            const { error } = await supabase
-                .from('Demandas Ativas')
-                .delete()
-                .eq('ID', id);
-
-            if (error) {
-                console.error("Erro ao excluir demanda:", error);
-                showModal("Erro", `Erro ao excluir demanda: ${error.message}`);
-            } else {
-                carregarDemandas();
-                showModal("Sucesso", "Demanda excluída com sucesso!");
-            }
-        }
-
         async function deleteContact(id) {
             // Nota: Não usar confirm() em ambiente Canvas
             showModal("Confirmação Necessária", "A exclusão de dados não pode ser confirmada neste ambiente. Assumindo 'Sim' para demonstração.");
@@ -912,21 +943,6 @@ e.target.closest('.tab-link').classList.remove('hover:bg-gray-200', 'dark:hover:
             demandModal.classList.add('hidden');
         });
 
-        function openEditDemandModal(id) {
-            const demanda = demandasCache.find(d => String(d.demanda) === id);
-            if (demanda) {
-                demandModalTitle.textContent = `Editar Demanda #${id}`;
-                demandIdToUpdateInput.value = id;
-                document.getElementById('demandTitleSelect').value = demanda.demanda;
-                document.getElementById('demandContactNameSelect').value = demanda.contato;
-                document.getElementById('demandDescription').value = demanda.descricao;
-                document.getElementById('demandStatus').value = demanda.status;
-                demandModal.classList.remove('hidden');
-            } else {
-                showModal("Erro", "Demanda não encontrada.");
-            }
-        }
-
         demandForm.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 const demandId = demandIdToUpdateInput.value;
@@ -950,7 +966,7 @@ e.target.closest('.tab-link').classList.remove('hover:bg-gray-200', 'dark:hover:
                     // Inserir na tabela 'Demandas Ativas'
                     const { error: insertError } = await supabase
                         .from('Demandas Ativas')
-                        .insert([{ demanda, contato, descricao, status }]);
+                        .insert([{ descricao, status }]);
                     error = insertError;
                     message = "Demanda adicionada com sucesso!";
                 }
