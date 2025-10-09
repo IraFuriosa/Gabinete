@@ -881,6 +881,7 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
             isAuthenticated = false;
             demandasCache = [];
             contatosCache = [];
+            document.getElementById('loginForm').reset(); // <-- Limpa os campos de email e senha
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('mainApp').style.display = 'none';
 
