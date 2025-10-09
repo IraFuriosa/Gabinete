@@ -983,7 +983,7 @@ e.target.closest('.tab-link').classList.remove('hover:bg-gray-200', 'dark:hover:
                     // Inserir na tabela 'Demandas Ativas'
                     const { error: insertError } = await supabase
                         .from('Demandas Ativas')
-                        .insert([{ descricao, status }]);
+                        .insert([{ demanda, contato, descricao, status }]);
                     error = insertError;
                     message = "Demanda adicionada com sucesso!";
                 }
