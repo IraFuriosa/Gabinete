@@ -262,6 +262,18 @@
                     </div>
                 </div>
 
+            <!-- Filtros para Demandas -->
+    <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <input type="text" id="filterDemandasContato" placeholder="Filtrar por Nome do Contato..." class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+        <select id="filterDemandasStatus" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+        <option value="">Todos os Status</option>
+        <option value="Em Aberto">Em Aberto</option>
+        <option value="Em Andamento">Em Andamento</option>
+        <option value="Concluída">Concluída</option>
+        <option value="Cancelada">Cancelada</option>
+    </select>
+    <button id="clearDemandasFilter" class="py-2 px-4 rounded-lg shadow-md text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out">Limpar</button>
+</div>
                 <!-- Tabela de Demandas -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <div class="overflow-x-auto">
@@ -341,6 +353,15 @@
                     </div>
                 </div>
 
+            <!-- Filtros para Contatos -->
+    <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <input type="text" id="filterContatosNome" placeholder="Filtrar por Nome..." class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+        <select id="filterContatosRegiao" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+        <option value="">Todas as Regiões</option>
+        <!-- As opções serão preenchidas via JS -->
+    </select>
+    <button id="clearContatosFilter" class="py-2 px-4 rounded-lg shadow-md text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out">Limpar</button>
+</div>
                 <!-- Tabela de Contatos -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
                     <div class="overflow-x-auto">
@@ -674,6 +695,268 @@ document.querySelectorAll('.delete-demand-btn').forEach(button => {
             }
         }
 
+        // --- FILTROS ---
+
+// Função debounce para otimizar filtros de texto
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
+// Estados dos filtros
+let demandasFilters = {
+    contato: '',
+    status: ''
+};
+let contatosFilters = {
+    nome: '',
+    regiao: ''
+};
+
+// Função para atualizar as opções de filtro de Região em Contatos
+function updateContatosRegiaoFilterOptions() {
+    const select = document.getElementById('filterContatosRegiao');
+    select.innerHTML = '<option value="">Todas as Regiões</option>'; // Placeholder
+
+    // Extrai regiões únicas do cache de contatos
+    const allRegioes = contatosCache.map(c => c.regiao).filter(r => r && r.trim() !== '');
+    const uniqueRegioes = [...new Set(allRegioes)].sort();
+
+    uniqueRegioes.forEach(regiao => {
+        const option = document.createElement('option');
+        option.value = regiao;
+        option.textContent = regiao;
+        select.appendChild(option);
+    });
+}
+
+// Função para atualizar as opções de filtro de Status em Demandas
+function updateDemandasStatusFilterOptions() {
+    const select = document.getElementById('filterDemandasStatus');
+    // As opções padrão já estão no HTML, mas se quiser atualizar com base no cache:
+    // const allStatus = demandasCache.map(d => d.status).filter(s => s && s.trim() !== '');
+    // const uniqueStatus = [...new Set(allStatus)].sort();
+    // select.innerHTML = '<option value="">Todos os Status</option>';
+    // uniqueStatus.forEach(status => {
+    //     const option = document.createElement('option');
+    //     option.value = status;
+    //     option.textContent = status;
+    //     select.appendChild(option);
+    // });
+    // Por simplicidade, usaremos as opções fixas no HTML.
+}
+
+// Função para aplicar o filtro em Demandas
+function applyDemandasFilter() {
+    let filtered = demandasCache;
+
+    if (demandasFilters.contato) {
+        filtered = filtered.filter(d => d.contato.toLowerCase().includes(demandasFilters.contato.toLowerCase()));
+    }
+    if (demandasFilters.status) {
+        filtered = filtered.filter(d => d.status === demandasFilters.status);
+    }
+
+    // Re-renderiza a tabela com os dados filtrados
+    renderDemandas(filtered);
+}
+
+// Função para aplicar o filtro em Contatos
+function applyContatosFilter() {
+    let filtered = contatosCache;
+
+    if (contatosFilters.nome) {
+        filtered = filtered.filter(c => c.nome.toLowerCase().includes(contatosFilters.nome.toLowerCase()));
+    }
+    if (contatosFilters.regiao) {
+        filtered = filtered.filter(c => c.regiao === contatosFilters.regiao);
+    }
+
+    // Re-renderiza a tabela com os dados filtrados
+    renderContatos(filtered);
+}
+
+// Função para renderizar Demandas com filtros aplicados (recebe o array filtrado)
+function renderDemandas(dataToRender = demandasCache) {
+    const list = document.getElementById('demandasList');
+    list.innerHTML = ''; // Limpa a lista atual
+
+    if (dataToRender.length === 0) {
+        list.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhuma demanda encontrada.</td></tr>'; // Atualizado colspan
+        return;
+    }
+
+    // O cache original (ou filtrado) já está ordenado pelo mais novo (no carregarDemandas)
+    dataToRender.forEach((demanda, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
+        row.innerHTML = `
+            <!-- ID Sequencial (índice no array filtrado ou original) -->
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.demanda}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.contato}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.descricao}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.status}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                <button data-id="${demanda.ID}" class="edit-demand-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
+                <button data-id="${demanda.ID}" class="delete-demand-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
+            </td>
+        `;
+        list.appendChild(row);
+    });
+
+    // Adiciona listeners de evento para os botões de edição/exclusão
+    document.querySelectorAll('.edit-demand-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            handleDemandAction('edit', e.target.dataset.id);
+        });
+    });
+    document.querySelectorAll('.delete-demand-btn').forEach(button => {
+        button.addEventListener('click', (e) => {
+            handleDemandAction('delete', e.target.dataset.id);
+        });
+    });
+}
+
+// Função para renderizar Contatos com filtros aplicados (recebe o array filtrado)
+function renderContatos(dataToRender = contatosCache) {
+    const list = document.getElementById('contatosList');
+    list.innerHTML = ''; // Limpa a lista atual
+
+    if (dataToRender.length === 0) {
+        list.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum contato encontrado.</td></tr>';
+        return;
+    }
+
+    // O cache original (ou filtrado) já está ordenado pelo mais novo (no carregarContatos)
+    dataToRender.forEach((contato, index) => {
+        const row = document.createElement('tr');
+        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
+        row.innerHTML = `
+            <!-- ID Sequencial (índice no array filtrado ou original) -->
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.nome}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.telefone || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.regiao || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.endereco || '-'}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+                <button data-id="${contato.ID}" class="edit-contact-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
+                <button data-id="${contato.ID}" class="delete-contact-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
+            </td>
+        `;
+        list.appendChild(row);
+    });
+
+    // Adiciona listeners de evento para os botões de edição/exclusão
+    document.querySelectorAll('.edit-contact-btn').forEach(button => {
+        button.addEventListener('click', (e) => openEditContactModal(e.target.dataset.id));
+    });
+    document.querySelectorAll('.delete-contact-btn').forEach(button => {
+        button.addEventListener('click', (e) => deleteContact(e.target.dataset.id));
+    });
+}
+
+
+// --- EVENT LISTENERS PARA FILTROS ---
+
+// Filtro de texto para Contato (Demandas) com debounce
+const debouncedFilterDemandasContato = debounce(() => {
+    demandasFilters.contato = document.getElementById('filterDemandasContato').value.toLowerCase();
+    applyDemandasFilter();
+}, 300); // 300ms de delay
+
+document.getElementById('filterDemandasContato').addEventListener('input', debouncedFilterDemandasContato);
+
+// Filtro de seleção para Status (Demandas)
+document.getElementById('filterDemandasStatus').addEventListener('change', (e) => {
+    demandasFilters.status = e.target.value;
+    applyDemandasFilter();
+});
+
+// Botão Limpar Filtros Demandas
+document.getElementById('clearDemandasFilter').addEventListener('click', () => {
+    document.getElementById('filterDemandasContato').value = '';
+    document.getElementById('filterDemandasStatus').value = '';
+    demandasFilters.contato = '';
+    demandasFilters.status = '';
+    applyDemandasFilter(); // Re-renderiza sem filtros
+});
+
+
+// Filtro de texto para Nome (Contatos) com debounce
+const debouncedFilterContatosNome = debounce(() => {
+    contatosFilters.nome = document.getElementById('filterContatosNome').value.toLowerCase();
+    applyContatosFilter();
+}, 300); // 300ms de delay
+
+document.getElementById('filterContatosNome').addEventListener('input', debouncedFilterContatosNome);
+
+// Filtro de seleção para Região (Contatos)
+document.getElementById('filterContatosRegiao').addEventListener('change', (e) => {
+    contatosFilters.regiao = e.target.value;
+    applyContatosFilter();
+});
+
+// Botão Limpar Filtros Contatos
+document.getElementById('clearContatosFilter').addEventListener('click', () => {
+    document.getElementById('filterContatosNome').value = '';
+    document.getElementById('filterContatosRegiao').value = '';
+    contatosFilters.nome = '';
+    contatosFilters.regiao = '';
+    applyContatosFilter(); // Re-renderiza sem filtros
+});
+
+// --- ATUALIZAR FUNÇÕES DE CARREGAMENTO ---
+
+// ATUALIZAR carregarDemandas
+async function carregarDemandas() {
+    if (!isAuthenticated) return;
+    const { data, error } = await supabase
+        .from('Demandas Ativas')
+        .select('*')
+        .order('demanda', { ascending: false });
+    if (error) {
+        console.error("Erro ao carregar demandas:", error);
+        showModal("Erro de Conexão", "Não foi possível carregar as demandas. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)");
+    } else {
+        demandasCache = data;
+        renderDemandas(); // Renderiza com dados frescos
+        updateDashboardMetrics(); // Atualiza dashboard
+        updateDemandasStatusFilterOptions(); // Atualiza opções de filtro
+        applyDemandasFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
+        loadRegiaoOptions(); // Mantém a chamada original para o formulário de contato
+    }
+}
+
+// ATUALIZAR carregarContatos
+async function carregarContatos() {
+    if (!isAuthenticated) return;
+    const { data, error } = await supabase
+        .from('Contatos')
+        .select('ID, nome, telefone, regiao, endereco')
+        .order('ID', { ascending: false });
+    if (error) {
+        console.error("Erro ao carregar contatos:", error);
+        showModal("Erro de Conexão", "Não foi possível carregar os contatos. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)");
+    } else {
+        contatosCache = data;
+        renderContatos(); // Renderiza com dados frescos
+        updateDashboardMetrics(); // Atualiza dashboard
+        updateContatosRegiaoFilterOptions(); // Atualiza opções de filtro
+        applyContatosFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
+        console.log("Contatos carregados:", contatosCache);
+
+    }
+}
+
+
         function populateContactSelect() {
     const select = document.getElementById('demandContactNameSelect');
     select.innerHTML = '<option value="">Selecione um contato</option>';
@@ -806,6 +1089,7 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
             } else {
                 contatosCache = data;
                 renderContatos();
+                updateContatosRegiaoFilterOptions();
                 updateDashboardMetrics(); // Atualiza dashboard após carregar contatos
             }
         }
