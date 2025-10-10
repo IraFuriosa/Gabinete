@@ -1193,35 +1193,41 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
         });
 
 
-        // === Lógica de Tabs ===
-        document.querySelectorAll('.tab-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tabName = e.target.closest('.tab-link').dataset.tab;
+// === Lógica de Tabs ===
+document.querySelectorAll('.tab-link').forEach(link => {
+    link.addEventListener('click', (e) => {
+        e.preventDefault();
+        const tabName = e.target.closest('.tab-link').dataset.tab;
 
-                document.querySelectorAll('.tab-content').forEach(content => {
-                    content.classList.remove('active');
-                });
-                document.getElementById(tabName).classList.add('active');
-
-           // Adiciona as classes de ativação na Sidebar:
-e.target.closest('.tab-link').classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'active-tab');
-e.target.closest('.tab-link').classList.remove('hover:bg-gray-200', 'dark:hover:bg-gray-700');
-//
-
-                e.target.closest('.tab-link').classList.add('bg-indigo-600', 'text-white', 'shadow-md', 'active-tab');
-                e.target.closest('.tab-link').classList.remove('hover:bg-gray-200', 'dark:hover:bg-gray-700');
-
-                document.getElementById('pageTitle').textContent = e.target.closest('.tab-link').textContent.trim();
-
-                // Ação especial ao trocar para o dashboard (caso o gráfico não tenha sido inicializado)
-                if (tabName === 'dashboard' && !statusChart) {
-                    initializeCharts();
-                    updateDashboardMetrics();
-                }
-            });
+        // 1. Oculta todas as abas de conteúdo
+        document.querySelectorAll('.tab-content').forEach(content => {
+            content.classList.remove('active');
         });
 
+        // 2. Exibe a aba de conteúdo correspondente
+        document.getElementById(tabName).classList.add('active');
+
+        // 3. Remove classes de estilo ativo de TODOS os links de aba (sidebar e bottom-nav)
+        document.querySelectorAll('.tab-link').forEach(l => {
+            l.classList.remove('active-tab', 'active-tab-mobile', 'bg-indigo-600', 'text-white', 'shadow-md', 'hover:bg-gray-200', 'dark:hover:bg-gray-700');
+        });
+
+        // 4. Adiciona as classes de estilo ativo APENAS ao link clicado
+        const clickedLink = e.target.closest('.tab-link');
+        clickedLink.classList.add('active-tab', 'active-tab-mobile', 'bg-indigo-600', 'text-white', 'shadow-md');
+        // Remover classes de hover específicas para o estado ativo
+        clickedLink.classList.remove('hover:bg-gray-200', 'dark:hover:bg-gray-700');
+
+        // 5. Atualiza o título da página
+        document.getElementById('pageTitle').textContent = clickedLink.textContent.trim();
+
+        // 6. Ação especial para o dashboard
+        if (tabName === 'dashboard' && !statusChart) {
+            initializeCharts();
+            updateDashboardMetrics();
+        }
+    });
+});
 
         // === Lógica do Modal de Demandas ===
 
