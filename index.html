@@ -421,21 +421,39 @@
 
 <script>
     window.onload = function () {
-        // =========================================================================================
-        // CONFIGURAÇÃO CRÍTICA DO SUPABASE - DEVE SER ATUALIZADA!
-        // =========================================================================================
-        // POR FAVOR, SUBSTITUA ESTES VALORES pelos seus reais (URL do projeto e chave Anon)
+        // Verifica se o usuário estava autenticado anteriormente
+        const storedAuth = localStorage.getItem('isAuthenticated');
+        const storedEmail = localStorage.getItem('userEmail'); // Opcional: para reutilizar o nome/email
+        let isAuthenticated = (storedAuth === 'true'); // Converte string de volta para booleano
+
+        // Configuração do Supabase Client (mantida como estava)
         const SUPABASE_URL = 'https://czixoasuvhpxrldypzpz.supabase.co'; // !!! SUBSTITUIR PELA SUA URL REAL AQUI !!!
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aXhvYXN1dmhweHJsZHlwenB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzOTUsImV4cCI6MjA3NDIwNTM5NX0.msRmh-jYGjIOHDChgf8VWjiG7bzyIdh0M60YThv9Dtw'; // !!! SUBSTITUIR PELA SUA CHAVE ANON REAL AQUI !!!
-
-        // Inicializa o cliente Supabase
         const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Variáveis de Estado
-        let isAuthenticated = false;
+        // Variáveis de Estado (mantidas como estavam)
         let demandasCache = [];
         let contatosCache = [];
         let statusChart;
+
+        // Lógica de inicialização baseada no estado de autenticação
+        if (isAuthenticated) {
+            // O usuário estava autenticado na última sessão
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'flex';
+            if (storedEmail) {
+                document.getElementById('userName').textContent = storedEmail; // Restaura o nome/email do usuário
+            }
+            // Tenta carregar os dados iniciais
+            initializeCharts(); // Inicializa gráficos para evitar erros
+            carregarContatos(); // Carrega contatos
+            carregarDemandas(); // Carrega demandas
+        } else {
+            // O usuário não estava autenticado ou o localStorage foi limpo
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('mainApp').style.display = 'none';
+            // Não é necessário fazer mais nada aqui, a tela de login já está visível
+        }
 
         // =========================================================================================
         // FUNÇÕES DE UTILIDADE E INTERAÇÃO
@@ -1144,15 +1162,17 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
             } else if (data.session && data.user) {
                 // Lógica de sucesso (mantida do seu código original)
                 isAuthenticated = true;
+                // NOVO: Salva o estado de autenticação no localStorage
+                localStorage.setItem('isAuthenticated', 'true');
+                localStorage.setItem('userEmail', data.user.email); // Opcional: para reutilizar o nome/email
+
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex';
                 document.getElementById('userName').textContent = data.user.email; // Melhor usar o email retornado
-
                 // Tenta carregar os dados reais após o login
                 initializeCharts();
                 await carregarContatos();
                 await carregarDemandas();
-
             } else {
                  // Caso de erro inesperado
                  loginMessage.textContent = 'Erro desconhecido. Verifique suas credenciais e confirme seu e-mail.';
@@ -1161,14 +1181,17 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
         });
 // ...
 
-        document.getElementById('logoutButton').addEventListener('click', () => {
+                document.getElementById('logoutButton').addEventListener('click', () => {
             isAuthenticated = false;
+            // NOVO: Remove o estado de autenticação do localStorage
+            localStorage.removeItem('isAuthenticated');
+            localStorage.removeItem('userEmail'); // Opcional: remove também o email
+
             demandasCache = [];
             contatosCache = [];
             document.getElementById('loginForm').reset(); // <-- Limpa os campos de email e senha
             document.getElementById('loginScreen').style.display = 'flex';
             document.getElementById('mainApp').style.display = 'none';
-
         });
 
 
