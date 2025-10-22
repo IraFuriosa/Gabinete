@@ -74,7 +74,6 @@
             </div>
             <div>
                 <label for="password" class="block text-sm font-medium mb-1">Senha</label>
-                 <!-- Aplicamos 'select-none' aqui para desabilitar a seleção do valor sugerido -->
                 <input type="password" id="password" required
                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white select-none"
                        placeholder="*************">
@@ -219,7 +218,6 @@
                                 <label for="demandTitleSelect" class="block text-sm font-medium mb-1">Demanda</label>
                                 <select id="demandTitleSelect" name="demandTitle" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
                                 <option value="">Selecione uma demanda</option>
-                                <!-- As opções serão preenchidas via JS -->
                         </select>
                             </div>
 
@@ -227,7 +225,6 @@
                                 <label for="demandContactNameSelect" class="block text-sm font-medium mb-1">Nome</label>
                                  <select id="demandContactNameSelect" name="demandContact" required class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
                                 <option value="">Selecione uma demanda</option>
-                                <!-- As opções serão preenchidas via JS -->
                         </select>
                             </div>
 
@@ -236,6 +233,16 @@
                                 <textarea id="demandDescription" rows="3" required placeholder="Detalhes da demanda..."
                                           class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white"></textarea>
                             </div>
+							<div>
+								<label for="demandData_registro" class="block text-sm font-medium mb-1">Data de Início</label>
+								<input type="date" id="demandData_registro" 
+									class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+							</div>
+							<div>
+								<label for="demandData_conclusao" class="block text-sm font-medium mb-1">Data de Conclusão</label>
+								<input type="date" id="demandData_conclusao" 
+									class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700 dark:text-white">
+							</div>
 
                             <div>
                                 <label for="demandStatus" class="block text-sm font-medium mb-1">Status</label>
@@ -284,6 +291,8 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Demanda</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nome</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descrição</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data de Registro</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data de Conclusão</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
                                 </tr>
@@ -477,6 +486,8 @@ async function handleDemandAction(action, id) {
             document.getElementById('demandTitleSelect').value = demanda.demanda;
             document.getElementById('demandContactNameSelect').value = demanda.contato;
             document.getElementById('demandDescription').value = demanda.descricao;
+			document.getElementById('demandData_registro').value = demanda.data_registro;
+			document.getElementById('demandData_conclusao').value = demanda.data_conclusao;
             document.getElementById('demandStatus').value = demanda.status;
 
             document.getElementById('demandModal').classList.remove('hidden');
@@ -553,6 +564,8 @@ async function handleDemandAction(action, id) {
                     <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.demanda}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.contato}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.descricao}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_registro}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_conclusao}</td>
                     <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.status}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                         <!-- Botões de ação ainda usam o ID real (demanda.ID) para as operações CRUD -->
@@ -569,12 +582,28 @@ async function handleDemandAction(action, id) {
         handleDemandAction('edit', e.target.dataset.id);
     });
 });
-document.querySelectorAll('.delete-demand-btn').forEach(button => {
+            document.querySelectorAll('.delete-demand-btn').forEach(button => {
     button.addEventListener('click', (e) => {
         handleDemandAction('delete', e.target.dataset.id);
     });
 });
         }
+        
+        // Função para formatar data (YYYY-MM-DD ou ISO String) para DD/MM/AAAA
+// Retorna '-' se a data for inválida ou vazia
+function formatDateToBR(dateString) {
+  if (!dateString) {
+      return '-'; // ou qualquer valor padrão para datas vazias
+  }
+  const date = new Date(dateString);
+  // Verifica se a data é inválida (NaN)
+  if (isNaN(date.getTime())) {
+      console.warn(`Data inválida encontrada: ${dateString}`);
+      return '-'; // ou uma string vazia ''
+  }
+  // Formata para DD/MM/AAAA
+  return date.toLocaleDateString('pt-BR', { timeZone: 'UTC' }); // Usar UTC para evitar deslocamento de dia
+}
 
         // Função para renderizar a tabela de Contatos
         function renderContatos() {
@@ -821,6 +850,8 @@ function renderDemandas(dataToRender = demandasCache) {
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.demanda}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.contato}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.descricao}</td>
+			<td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_registro}</td>
+			<td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_conclusao}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.status}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                 <button data-id="${demanda.ID}" class="edit-demand-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
@@ -1274,45 +1305,69 @@ document.querySelectorAll('.tab-link').forEach(link => {
             demandModal.classList.add('hidden');
         });
 
-        demandForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const demandId = demandIdToUpdateInput.value;
-                const demanda = document.getElementById('demandTitleSelect').value;
-                const contato = document.getElementById('demandContactNameSelect').value;
-                const descricao = document.getElementById('demandDescription').value;
-                const status = document.getElementById('demandStatus').value; // Usando os status em pt-BR
+// Exemplo de como pode estar (substitua pelo seu código real)
+demandForm.addEventListener('submit', async (e) => {
+    e.preventDefault(); // Impede o envio padrão do formulário
 
-                let error = null;
-                let message = '';
+    // 1. Captura os valores dos campos
+    const demanda = document.getElementById('demandTitleSelect').value;
+    const contato = document.getElementById('demandContactNameSelect').value;
+    const descricao = document.getElementById('demandDescription').value;
+    const data_registro_input = document.getElementById('demandData_registro').value; // Captura o valor bruto
+    const data_conclusao_input = document.getElementById('demandData_conclusao').value; // Captura o valor bruto
+    const status = document.getElementById('demandStatus').value;
+    const idToUpdate = document.getElementById('demandIdToUpdateInput').value; // ID para edição
 
-                if (demandId) {
-                    // Atualizar na tabela 'Demandas Ativas'
-                    const { error: updateError } = await supabase
-                        .from('Demandas Ativas')
-                        .update({ demanda, contato, descricao, status })
-                        .eq('ID', demandId);
-                    error = updateError;
-                    message = "Demanda atualizada com sucesso!";
-                } else {
-                    // Inserir na tabela 'Demandas Ativas'
-                    const { error: insertError } = await supabase
-                        .from('Demandas Ativas')
-                        .insert([{ demanda, contato, descricao, status }]);
-                    error = insertError;
-                    message = "Demanda adicionada com sucesso!";
-                }
+    // 2. Validação (exemplo)
+    if (!demanda || !contato || !descricao || !status) {
+        showModal("Erro", "Por favor, preencha todos os campos obrigatórios (Demanda, Nome, Descrição, Status).");
+        return;
+    }
+
+    // 3. Preparar dados para o banco de dados
+    // Validação e preparação das datas
+    const dadosParaSalvar = { demanda, contato, descricao, status }; // Inicia o objeto sem as datas
+
+    // Adiciona data_registro apenas se for uma string válida
+    if (data_registro_input && /^\d{4}-\d{2}-\d{2}$/.test(data_registro_input)) { // Verifica o formato YYYY-MM-DD
+        dadosParaSalvar.data_registro = data_registro_input;
+    }
+
+    // Adiciona data_conclusao apenas se for uma string válida
+    if (data_conclusao_input && /^\d{4}-\d{2}-\d{2}$/.test(data_conclusao_input)) { // Verifica o formato YYYY-MM-DD
+        dadosParaSalvar.data_conclusao = data_conclusao_input;
+    }
 
 
-                if (error) {
-                    console.error("Erro ao processar demanda:", error);
-                    showModal("Erro", `Erro ao processar demanda: ${error.message}`);
-                } else {
-                    demandModal.classList.add('hidden');
-                    resetDemandForm();
-                    carregarDemandas();
-                    showModal("Sucesso", message);
-                }
-            });
+    // 4. Chama o Supabase para inserir ou atualizar
+    let error = null;
+    let message = '';
+    if (idToUpdate) { // Se estiver editando
+        const { error: updateError } = await supabase
+            .from('Demandas Ativas')
+            .update(dadosParaSalvar) // Passa o objeto com ou sem as datas
+            .eq('ID', idToUpdate);
+        error = updateError;
+        message = "Demanda atualizada com sucesso!";
+    } else { // Se estiver criando nova
+        const { error: insertError } = await supabase
+            .from('Demandas Ativas')
+            .insert([dadosParaSalvar]); // Passa o objeto com ou sem as datas
+        error = insertError;
+        message = "Demanda adicionada com sucesso!";
+    }
+
+    // 5. Tratamento de erro/sucesso
+    if (error) {
+        console.error("Erro ao salvar demanda:", error);
+        showModal("Erro", `Erro ao salvar demanda: ${error.message}`);
+    } else {
+        demandModal.classList.add('hidden'); // Fecha o modal
+        resetDemandForm(); // Limpa o formulário
+        carregarDemandas(); // Recarrega os dados da tabela
+        showModal("Sucesso", message);
+    }
+});
 
         document.getElementById('addDemandButton').addEventListener('click', () => {
           resetDemandForm();
