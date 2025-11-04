@@ -286,7 +286,7 @@
                 </div>
 
             <!-- Filtros para Demandas -->
-    <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
         <input type="text" id="filterDemandasContato" placeholder="Filtrar por Nome do Contato..." class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
         <select id="filterDemandasStatus" class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
         <option value="">Todos os Status</option>
@@ -295,11 +295,17 @@
         <option value="Concluída">Concluída</option>
         <option value="Cancelada">Cancelada</option>
     </select>
-    <button id="clearDemandasFilter" class="py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm">Limpar</button>
+    <div class="flex flex-wrap gap-2">
+        <button id="clearDemandasFilter" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm">Limpar</button>
+    </div>
+    <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
+        <button id="exportDemandasCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 transition duration-150 ease-in-out font-semibold text-sm">Exportar CSV</button>
+        <button id="importDemandasCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out font-semibold text-sm">Importar CSV</button>
+        <input type="file" id="demandasCsvInput" class="hidden" accept=".csv">
+    </div>
 </div>
-                <!-- Tabela de Demandas -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="overflow-x-auto">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" id="demandas-table-wrapper">
+                    <div class="overflow-x-auto bottom-scrollbar-wrapper">
                          <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
@@ -307,8 +313,18 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Demanda</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nome</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descrição</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data Registro</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Data Conclusão</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" data-sort="data_registro">
+                                        <div class="flex items-center">
+                                            <span>Data Registro</span>
+                                            <span class="sort-icon ml-1"></span>
+                                        </div>
+                                    </th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" data-sort="data_conclusao">
+                                        <div class="flex items-center">
+                                            <span>Data Conclusão</span>
+                                            <span class="sort-icon ml-1"></span>
+                                        </div>
+                                    </th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
                                 </tr>
@@ -376,17 +392,24 @@
                 </div>
 
             <!-- Filtros para Contatos -->
-    <div class="mb-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
         <input type="text" id="filterContatosNome" placeholder="Filtrar por Nome..." class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
         <select id="filterContatosRegiao" class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
         <option value="">Todas as Regiões</option>
         <!-- As opções serão preenchidas via JS -->
     </select>
-    <button id="clearContatosFilter" class="py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm">Limpar</button>
+    <div class="flex flex-wrap gap-2">
+        <button id="clearContatosFilter" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm">Limpar</button>
+    </div>
+     <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
+        <button id="exportContatosCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 transition duration-150 ease-in-out font-semibold text-sm">Exportar CSV</button>
+        <button id="importContatosCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out font-semibold text-sm">Importar CSV</button>
+        <input type="file" id="contatosCsvInput" class="hidden" accept=".csv">
+    </div>
 </div>
                 <!-- Tabela de Contatos -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
-                    <div class="overflow-x-auto">
+                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" id="contatos-table-wrapper">
+                    <div class="overflow-x-auto bottom-scrollbar-wrapper">
                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
@@ -462,8 +485,8 @@
 <script>
     window.onload = function () {
         // Verifica se o usuário estava autenticado anteriormente
-        const storedAuth = localStorage.getItem('isAuthenticated');
-        const storedEmail = localStorage.getItem('userEmail'); // Opcional: para reutilizar o nome/email
+        const storedAuth = sessionStorage.getItem('isAuthenticated');
+        const storedEmail = sessionStorage.getItem('userEmail'); // Opcional: para reutilizar o nome/email
         let isAuthenticated = (storedAuth === 'true'); // Converte string de volta para booleano
 
         // Configuração do Supabase Client (mantida como estava)
@@ -475,6 +498,8 @@
         let demandasCache = [];
         let contatosCache = [];
         let statusChart;
+        let sortColumn = 'updated_at';
+        let sortDirection = 'desc';
 
         // Lógica de inicialização baseada no estado de autenticação
         if (isAuthenticated) {
@@ -498,6 +523,125 @@
         // =========================================================================================
         // FUNÇÕES DE UTILIDADE E INTERAÇÃO
         // =========================================================================================
+
+        // =========================================================================================
+        // FUNÇÕES DE EXPORTAÇÃO E IMPORTAÇÃO CSV
+        // =========================================================================================
+
+        function exportToCSV(data, filename) {
+            if (!data || data.length === 0) {
+                showModal("Aviso", "Não há dados para exportar.");
+                return;
+            }
+
+            const headers = Object.keys(data[0]);
+            // Remove o ID da exportação para evitar confusão na re-importação
+            const filteredHeaders = headers.filter(h => h !== 'ID');
+
+            const csvRows = [filteredHeaders.join(',')]; // Cabeçalho
+
+            for (const row of data) {
+                const values = filteredHeaders.map(header => {
+                    let value = row[header];
+                    if (value === null || value === undefined) {
+                        value = '';
+                    } else if (Array.isArray(value)) {
+                        // Se for um array (como em 'demanda'), junta com ';' para evitar conflito com a vírgula do CSV
+                        value = `"${value.join('; ')}"`;
+                    } else {
+                        const stringValue = String(value);
+                        // Se o valor contém vírgula, aspas ou quebra de linha, coloca entre aspas
+                        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+                            value = `"${stringValue.replace(/"/g, '""')}"`; // Escapa aspas duplas
+                        }
+                    }
+                    return value;
+                });
+                csvRows.push(values.join(','));
+            }
+
+            const csvString = csvRows.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+
+            const link = document.createElement("a");
+            if (link.download !== undefined) {
+                const url = URL.createObjectURL(blob);
+                link.setAttribute("href", url);
+                link.setAttribute("download", filename);
+                link.style.visibility = 'hidden';
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            }
+        }
+
+        function handleCsvImport(file, tableName, requiredFields, callback) {
+            if (!file) return;
+
+            // Get user first
+            supabase.auth.getUser().then(({ data: { user } }) => {
+                if (!user) {
+                    showModal("Erro", "Você não está autenticado para importar dados.");
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = async (event) => {
+                    const csv = event.target.result;
+                    const lines = csv.split(/\r\n|\n/);
+                    if (lines.length < 2) {
+                        showModal("Erro de Importação", "O arquivo CSV está vazio ou não contém dados.");
+                        return;
+                    }
+
+                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
+                    const dataToInsert = [];
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i];
+                        if (!line.trim()) continue;
+
+                        const values = line.split(','); // Simplificado: não lida com vírgulas dentro de aspas
+                        const obj = { user_id: user.id }; // Add user_id here
+                        for (let j = 0; j < headers.length; j++) {
+                            let value = values[j] ? values[j].trim().replace(/"/g, '') : '';
+                            // Tratamento especial para o campo 'demanda' que pode ser múltiplo
+                            if (headers[j] === 'demanda' && value.includes(';')) {
+                                obj[headers[j]] = value.split(';').map(s => s.trim());
+                            } else {
+                                obj[headers[j]] = value;
+                            }
+                        }
+
+                        // Validação simples
+                        const hasRequired = requiredFields.every(field => obj[field] && obj[field] !== '');
+                        if (hasRequired) {
+                            dataToInsert.push(obj);
+                        } else {
+                            console.warn(`Linha ${i + 1} ignorada por falta de campos obrigatórios.`);
+                        }
+                    }
+
+                    if (dataToInsert.length > 0) {
+                        const { error } = await supabase.from(tableName).insert(dataToInsert);
+                        if (error) {
+                            showModal("Erro de Importação", `Falha ao importar dados: ${error.message}`);
+                        } else {
+                            showModal("Sucesso", `${dataToInsert.length} registros importados com sucesso!`);
+                            callback(); // Recarrega os dados da tabela
+                        }
+                    } else {
+                        showModal("Aviso", "Nenhum registro válido encontrado no arquivo para importação.");
+                    }
+                };
+                reader.onerror = () => {
+                    showModal("Erro de Leitura", "Não foi possível ler o arquivo selecionado.");
+                };
+                reader.readAsText(file);
+            });
+        }
+
+
         // NOVO: Função centralizada para lidar com ações (Edição e Exclusão)
 async function handleDemandAction(action, id) {
     if (action === 'edit') {
@@ -702,6 +846,22 @@ document.querySelectorAll('.delete-demand-btn').forEach(button => {
         }
 
         // Função crucial atualizada para contabilizar e exibir as novas métricas
+        function formatDemandaDisplay(demandaData) {
+            if (typeof demandaData === 'string' && demandaData.startsWith('[')) {
+                try {
+                    const parsed = JSON.parse(demandaData);
+                    if (Array.isArray(parsed)) {
+                        return parsed.join(', ');
+                    }
+                } catch (e) {
+                    // Not a valid JSON string, return as is
+                }
+            } else if (Array.isArray(demandaData)) {
+                return demandaData.join(', ');
+            }
+            return demandaData;
+        }
+
         function updateDashboardMetrics() {
             // Métrica 1: Total de Contatos
             const totalContatos = contatosCache.length;
@@ -750,12 +910,18 @@ document.querySelectorAll('.delete-demand-btn').forEach(button => {
                 if (demandasCache.length === 0) {
                     topList.innerHTML = '<li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Nenhuma demanda ainda.</li>';
                 } else {
-                    // O cache já está ordenado por ID decrescente
-                    demandasCache.slice(0, 5).forEach(demanda => {
+                    // Cria uma cópia do cache e ordena por 'updated_at' (ou 'data_registro' como fallback)
+                    const sortedDemandas = [...demandasCache].sort((a, b) => {
+                        const dateA = new Date(a.updated_at || a.data_registro);
+                        const dateB = new Date(b.updated_at || b.data_registro);
+                        return dateB - dateA; // Ordena do mais recente para o mais antigo
+                    });
+
+                    sortedDemandas.slice(0, 5).forEach(demanda => {
                         const li = document.createElement('li');
                         li.className = 'p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium flex justify-between items-center';
                         li.innerHTML = `
-                            <span>${demanda.demanda} (${demanda.contato})</span>
+                            <span>${formatDemandaDisplay(demanda.demanda)} (${demanda.contato})</span>
                             <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">${demanda.status}</span>
                         `;
                         topList.appendChild(li);
@@ -858,18 +1024,16 @@ function renderDemandas(dataToRender = demandasCache) {
     list.innerHTML = ''; // Limpa a lista atual
 
     if (dataToRender.length === 0) {
-        list.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Nenhuma demanda encontrada.</td></tr>'; // Atualizado colspan
+        list.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Nenhuma demanda encontrada.</td></tr>';
         return;
     }
 
-    // O cache original (ou filtrado) já está ordenado pelo mais novo (no carregarDemandas)
     dataToRender.forEach((demanda, index) => {
         const row = document.createElement('tr');
         row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
         row.innerHTML = `
-            <!-- ID Sequencial (índice no array filtrado ou original) -->
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${Array.isArray(demanda.demanda) ? demanda.demanda.join(', ') : demanda.demanda}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${formatDemandaDisplay(demanda.demanda)}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.contato}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.descricao}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_registro ? new Date(demanda.data_registro).toLocaleDateString('pt-BR') : '-'}</td>
@@ -960,6 +1124,9 @@ document.getElementById('clearDemandasFilter').addEventListener('click', () => {
     applyDemandasFilter(); // Re-renderiza sem filtros
 });
 
+// Event listener for sort dropdown
+
+
 
 // Filtro de texto para Nome (Contatos) com debounce
 const debouncedFilterContatosNome = debounce(() => {
@@ -989,10 +1156,11 @@ document.getElementById('clearContatosFilter').addEventListener('click', () => {
 // ATUALIZAR carregarDemandas
 async function carregarDemandas() {
     if (!isAuthenticated) return;
+    const sortAsc = sortDirection === 'asc';
     const { data, error } = await supabase
         .from('Demandas Ativas')
         .select('*')
-        .order('demanda', { ascending: false });
+        .order(sortColumn, { ascending: sortAsc, nullsFirst: false });
     if (error) {
         console.error("Erro ao carregar demandas:", error);
         showModal("Erro de Conexão", "Não foi possível carregar as demandas. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)");
@@ -1003,6 +1171,7 @@ async function carregarDemandas() {
         updateDemandasStatusFilterOptions(); // Atualiza opções de filtro
         applyDemandasFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
         loadRegiaoOptions(); // Mantém a chamada original para o formulário de contato
+        updateSortIcons(); // Update sort icons
     }
 }
 
@@ -1011,7 +1180,7 @@ async function carregarContatos() {
     if (!isAuthenticated) return;
     const { data, error } = await supabase
         .from('Contatos')
-        .select('ID, nome, telefone, regiao, endereco')
+        .select('ID, nome, telefone, regiao, endereco, user_id')
         .order('ID', { ascending: false });
     if (error) {
         console.error("Erro ao carregar contatos:", error);
@@ -1205,8 +1374,8 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
                 // Lógica de sucesso (mantida do seu código original)
                 isAuthenticated = true;
                 // NOVO: Salva o estado de autenticação no localStorage
-                localStorage.setItem('isAuthenticated', 'true');
-                localStorage.setItem('userEmail', data.user.email); // Opcional: para reutilizar o nome/email
+                sessionStorage.setItem('isAuthenticated', 'true');
+                sessionStorage.setItem('userEmail', data.user.email); // Opcional: para reutilizar o nome/email
 
                 document.getElementById('loginScreen').style.display = 'none';
                 document.getElementById('mainApp').style.display = 'flex';
@@ -1226,8 +1395,8 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
                 document.getElementById('logoutButton').addEventListener('click', () => {
             isAuthenticated = false;
             // NOVO: Remove o estado de autenticação do localStorage
-            localStorage.removeItem('isAuthenticated');
-            localStorage.removeItem('userEmail'); // Opcional: remove também o email
+            sessionStorage.removeItem('isAuthenticated');
+            sessionStorage.removeItem('userEmail'); // Opcional: remove também o email
 
             demandasCache = [];
             contatosCache = [];
@@ -1441,7 +1610,13 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
                 return;
             }
 
-            const dataToSave = { demanda, contato, descricao, status, data_registro, data_conclusao };
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                showModal("Erro", "Você não está autenticado.");
+                return;
+            }
+
+            const dataToSave = { demanda, contato, descricao, status, data_registro, data_conclusao, user_id: user.id };
 
             if (demandId) {
                 // Atualizar
@@ -1464,6 +1639,35 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
                 await carregarDemandas();
                 showModal("Sucesso", message);
             }
+        });
+
+        // === Lógica de Importação/Exportação ===
+        document.getElementById('exportContatosCSV').addEventListener('click', () => {
+            exportToCSV(contatosCache, 'contatos.csv');
+        });
+
+        document.getElementById('importContatosCSV').addEventListener('click', () => {
+            document.getElementById('contatosCsvInput').click();
+        });
+
+        document.getElementById('contatosCsvInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleCsvImport(file, 'Contatos', ['nome'], carregarContatos);
+            e.target.value = null; // Reseta o input para permitir selecionar o mesmo arquivo novamente
+        });
+
+        document.getElementById('exportDemandasCSV').addEventListener('click', () => {
+            exportToCSV(demandasCache, 'demandas.csv');
+        });
+
+        document.getElementById('importDemandasCSV').addEventListener('click', () => {
+            document.getElementById('demandasCsvInput').click();
+        });
+
+        document.getElementById('demandasCsvInput').addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            handleCsvImport(file, 'Demandas Ativas', ['demanda', 'contato', 'status'], carregarDemandas);
+            e.target.value = null; // Reseta o input
         });
 
         // === Lógica do Modal de Contatos ===
@@ -1513,7 +1717,13 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
             let error = null;
             let message = '';
 
-            const dataToSave = { nome, telefone, regiao, endereco };
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                showModal("Erro", "Você não está autenticado.");
+                return;
+            }
+
+            const dataToSave = { nome, telefone, regiao, endereco, user_id: user.id };
 
             if (contactId) {
                 // Atualizar
@@ -1562,6 +1772,74 @@ contactPhone.addEventListener('input', function (e) {
 
     e.target.value = value;
 });
+        function updateSortIcons() {
+            document.querySelectorAll('#demandas th[data-sort]').forEach(header => {
+                const iconSpan = header.querySelector('.sort-icon');
+                if (header.dataset.sort === sortColumn) {
+                    if (sortDirection === 'asc') {
+                        iconSpan.innerHTML = ' &#9650;'; // up arrow
+                    } else {
+                        iconSpan.innerHTML = ' &#9660;'; // down arrow
+                    }
+                } else {
+                    iconSpan.innerHTML = '';
+                }
+            });
+        }
+
+        document.querySelectorAll('#demandas th[data-sort]').forEach(header => {
+            header.addEventListener('click', () => {
+                const newSortColumn = header.dataset.sort;
+                if (sortColumn === newSortColumn) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = newSortColumn;
+                    sortDirection = 'desc';
+                }
+                carregarDemandas();
+            });
+        });
+        function initDoubleScrollbar(wrapperId) {
+            const wrapper = document.getElementById(wrapperId);
+            if (!wrapper) return;
+
+            const bottomScrollbar = wrapper.querySelector('.bottom-scrollbar-wrapper');
+            const table = wrapper.querySelector('table');
+            if (!bottomScrollbar || !table) return;
+
+            const topScrollbarWrapper = document.createElement('div');
+            topScrollbarWrapper.style.overflowX = 'auto';
+            topScrollbarWrapper.style.overflowY = 'hidden';
+            topScrollbarWrapper.classList.add('top-scrollbar-wrapper');
+
+            const topScrollbarInner = document.createElement('div');
+            topScrollbarInner.style.height = '1px';
+
+            topScrollbarWrapper.appendChild(topScrollbarInner);
+            wrapper.prepend(topScrollbarWrapper);
+
+            function updateWidth() {
+                topScrollbarInner.style.width = table.scrollWidth + 'px';
+            }
+
+            updateWidth();
+
+            topScrollbarWrapper.addEventListener('scroll', () => {
+                bottomScrollbar.scrollLeft = topScrollbarWrapper.scrollLeft;
+            });
+
+            bottomScrollbar.addEventListener('scroll', () => {
+                topScrollbarWrapper.scrollLeft = bottomScrollbar.scrollLeft;
+            });
+
+            window.addEventListener('resize', updateWidth);
+
+            const observer = new MutationObserver(updateWidth);
+            observer.observe(table, { childList: true, subtree: true });
+        }
+
+        initDoubleScrollbar('demandas-table-wrapper');
+        initDoubleScrollbar('contatos-table-wrapper');
     }
 
 </script>
