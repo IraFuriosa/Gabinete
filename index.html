@@ -51,6 +51,21 @@
         background: #6b7280;
     }
 
+    /* Estilos para tabela com corpo rolável e cabeçalho fixo */
+    .table-wrapper-scroll-y {
+        display: block;
+        max-height: 60vh; /* Usa 60% da altura da tela, ajuste conforme necessário */
+        overflow-y: auto;
+        position: relative;
+    }
+
+    .sticky-header thead {
+        position: -webkit-sticky; /* Para Safari */
+        position: sticky;
+        top: 0;
+        z-index: 10; /* Garante que o cabeçalho fique sobre o conteúdo */
+    }
+
   </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
@@ -217,7 +232,7 @@
                             <div>
                                 <label for="demandTitleSelect" class="block text-sm font-medium mb-1">Demanda</label>
                                 <!-- O select original, agora oculto. Ele armazenará os valores para o formulário. -->
-                                <select id="demandTitleSelect" name="demandTitle" required multiple class="hidden">
+                                <select id="demandTitleSelect" name="demandTitle" multiple class="hidden">
                                     <!-- As opções serão preenchidas via JS -->
                                 </select>
 
@@ -305,8 +320,8 @@
     </div>
 </div>
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" id="demandas-table-wrapper">
-                    <div class="overflow-x-auto bottom-scrollbar-wrapper">
-                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <div class="overflow-x-auto bottom-scrollbar-wrapper table-wrapper-scroll-y">
+                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 sticky-header">
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
@@ -409,8 +424,8 @@
 </div>
                 <!-- Tabela de Contatos -->
                 <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" id="contatos-table-wrapper">
-                    <div class="overflow-x-auto bottom-scrollbar-wrapper">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                    <div class="overflow-x-auto bottom-scrollbar-wrapper table-wrapper-scroll-y">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 sticky-header">
                             <thead class="bg-gray-50 dark:bg-gray-700">
                                 <tr>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
@@ -659,7 +674,7 @@ async function handleDemandAction(action, id) {
 
             // Preenchimento dos campos
             // Limpa seleções anteriores e seleciona as opções corretas para multiselect
-            const demandValues = Array.isArray(demanda.demanda) ? demanda.demanda : [demanda.demanda];
+            const demandValues = Array.isArray(demanda.demanda) ? demanda.demanda.map(v => v.trim()) : [demanda.demanda.trim()];
             
             // Limpa o componente customizado e o preenche com os valores existentes
             document.getElementById('demandTagsContainer').innerHTML = '';
@@ -989,6 +1004,13 @@ function updateDemandasStatusFilterOptions() {
 }
 
 // Função para aplicar o filtro em Demandas
+// Função para atualizar os campos de filtro de Demandas
+function updateDemandasFilterInputs() {
+    document.getElementById('filterDemandasContato').value = demandasFilters.contato;
+    document.getElementById('filterDemandasStatus').value = demandasFilters.status;
+}
+
+// Função para aplicar o filtro em Demandas
 function applyDemandasFilter() {
     let filtered = demandasCache;
 
@@ -999,8 +1021,41 @@ function applyDemandasFilter() {
         filtered = filtered.filter(d => d.status === demandasFilters.status);
     }
 
-    // Re-renderiza a tabela com os dados filtrados
+    // NEW: Sorting logic is moved here
+    const statusOrder = { 'Em Aberto': 1, 'Em Andamento': 2, 'Concluída': 3, 'Cancelada': 4 };
+    const sortAsc = sortDirection === 'asc';
+
+    filtered.sort((a, b) => {
+        const orderA = statusOrder[a.status] || 99;
+        const orderB = statusOrder[b.status] || 99;
+        if (orderA !== orderB) {
+            return orderA - orderB;
+        }
+        // Secondary sort (the one user selected)
+        const valA = a[sortColumn];
+        const valB = b[sortColumn];
+
+        // Handle null or undefined values
+        if (valA == null && valB == null) return 0;
+        if (valA == null) return 1; // nulls last
+        if (valB == null) return -1;
+
+        if (valA < valB) return sortAsc ? -1 : 1;
+        if (valA > valB) return sortAsc ? 1 : -1;
+        return 0;
+    });
+
+
+    // Re-renderiza a tabela com os dados filtrados E ORDENADOS
     renderDemandas(filtered);
+    updateDemandasFilterInputs(); // NEW: Update filter input fields
+}
+
+// Função para aplicar o filtro em Contatos
+// Função para atualizar os campos de filtro de Contatos
+function updateContatosFilterInputs() {
+    document.getElementById('filterContatosNome').value = contatosFilters.nome;
+    document.getElementById('filterContatosRegiao').value = contatosFilters.regiao;
 }
 
 // Função para aplicar o filtro em Contatos
@@ -1016,6 +1071,7 @@ function applyContatosFilter() {
 
     // Re-renderiza a tabela com os dados filtrados
     renderContatos(filtered);
+    updateContatosFilterInputs(); // NEW: Update filter input fields
 }
 
 // Função para renderizar Demandas com filtros aplicados (recebe o array filtrado)
@@ -1028,9 +1084,24 @@ function renderDemandas(dataToRender = demandasCache) {
         return;
     }
 
+    let separatorAdded = false;
     dataToRender.forEach((demanda, index) => {
+        const isInactive = demanda.status === 'Concluída' || demanda.status === 'Cancelada';
+
+        if (isInactive && !separatorAdded) {
+            const separatorRow = document.createElement('tr');
+            separatorRow.className = 'demand-separator';
+            separatorRow.innerHTML = `
+                <td colspan="8" class="px-6 py-2 text-center text-sm font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 sticky top-0 z-[9]">
+                    Demandas Inativas
+                </td>
+            `;
+            list.appendChild(separatorRow);
+            separatorAdded = true;
+        }
+
         const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
+        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out' + (isInactive ? ' opacity-60' : '');
         row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${formatDemandaDisplay(demanda.demanda)}</td>
@@ -1156,22 +1227,26 @@ document.getElementById('clearContatosFilter').addEventListener('click', () => {
 // ATUALIZAR carregarDemandas
 async function carregarDemandas() {
     if (!isAuthenticated) return;
-    const sortAsc = sortDirection === 'asc';
+    // Sorting is now handled by applyDemandasFilter after fetching
     const { data, error } = await supabase
         .from('Demandas Ativas')
-        .select('*')
-        .order(sortColumn, { ascending: sortAsc, nullsFirst: false });
+        .select('*');
+
     if (error) {
         console.error("Erro ao carregar demandas:", error);
         showModal("Erro de Conexão", "Não foi possível carregar as demandas. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)");
     } else {
         demandasCache = data;
-        renderDemandas(); // Renderiza com dados frescos
-        updateDashboardMetrics(); // Atualiza dashboard
-        updateDemandasStatusFilterOptions(); // Atualiza opções de filtro
-        applyDemandasFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
-        loadRegiaoOptions(); // Mantém a chamada original para o formulário de contato
-        updateSortIcons(); // Update sort icons
+        // Update UI elements that depend on the full, unfiltered cache
+        updateDashboardMetrics();
+        updateDemandasStatusFilterOptions();
+        loadRegiaoOptions(); // This is for the contact form, but let's keep it here
+        
+        // Apply current filters and sort order, then render the table
+        applyDemandasFilter(); 
+        
+        // Update sort icons after filters are applied and table is potentially rendered
+        updateSortIcons();
     }
 }
 
@@ -1236,13 +1311,14 @@ async function loadDemandasOptions() {
 
     // Percorre todos os itens retornados, sem remover duplicatas
     data.forEach(demanda => {
+        const trimmedDemanda = demanda.Demanda.trim(); // Trim here
         const option = document.createElement('option');
-        option.value = demanda.Demanda; // Usa o ID como valor único
-        option.textContent = demanda.Demanda; // Usa o título como texto visível
+        option.value = trimmedDemanda; // Use trimmed value
+        option.textContent = trimmedDemanda; // Use trimmed value
         selectElement.appendChild(option);
         // Adiciona ao cache de opções para o componente customizado
-        if (!allDemandOptions.includes(demanda.Demanda)) {
-            allDemandOptions.push(demanda.Demanda);
+        if (!allDemandOptions.includes(trimmedDemanda)) { // Use trimmed value
+            allDemandOptions.push(trimmedDemanda);
         }
     });
 }
@@ -1474,30 +1550,31 @@ document.getElementById('addDemandButton').addEventListener('click', () => {
         // Função para adicionar uma tag e atualizar o select original
         function addDemandTag(value) {
             if (!value) return;
+            const trimmedValue = value.trim(); // Trim the value
 
             // Verifica se a tag já existe
             const existingTags = Array.from(tagsContainer.querySelectorAll('.demand-tag')).map(tag => tag.dataset.value);
-            if (existingTags.includes(value)) {
+            if (existingTags.includes(trimmedValue)) { // Use trimmedValue here
                 return; // Não adiciona duplicatas
             }
 
             // Cria a tag visual
             const tag = document.createElement('div');
             tag.className = 'demand-tag flex items-center bg-indigo-100 dark:bg-indigo-500/30 text-indigo-700 dark:text-indigo-200 text-sm font-medium px-2 py-1 rounded-md';
-            tag.dataset.value = value;
+            tag.dataset.value = trimmedValue; // Use trimmedValue here
             tag.innerHTML = `
-                <span>${value}</span>
+                <span>${trimmedValue}</span>
                 <button type="button" class="ml-2 text-indigo-500 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-100">&times;</button>
             `;
             tagsContainer.appendChild(tag);
 
             // Adiciona evento para remover a tag
             tag.querySelector('button').addEventListener('click', () => {
-                removeDemandTag(value);
+                removeDemandTag(trimmedValue); // Use trimmedValue here
             });
 
             // Atualiza o select original
-            const option = Array.from(originalSelect.options).find(opt => opt.value === value);
+            const option = Array.from(originalSelect.options).find(opt => opt.value === trimmedValue); // Use trimmedValue here
             if (option) {
                 option.selected = true;
             }
@@ -1796,7 +1873,10 @@ contactPhone.addEventListener('input', function (e) {
                     sortColumn = newSortColumn;
                     sortDirection = 'desc';
                 }
-                carregarDemandas();
+                // Re-apply filters and sorting without a new network request
+                applyDemandasFilter();
+                // Update the sort indicator icons
+                updateSortIcons();
             });
         });
         function initDoubleScrollbar(wrapperId) {
