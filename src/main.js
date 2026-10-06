@@ -1,11 +1,13 @@
 import { escapeHtml } from './utils.js';
+import { createClient } from '@supabase/supabase-js';
+import Chart from 'chart.js/auto';
 
 window.onload = function () {
     // Configuração do Supabase Client (mantida como estava)
     const SUPABASE_URL = 'https://czixoasuvhpxrldypzpz.supabase.co'; // !!! SUBSTITUIR PELA SUA URL REAL AQUI !!!
     const SUPABASE_ANON_KEY =
         'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aXhvYXN1dmhweHJsZHlwenB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzOTUsImV4cCI6MjA3NDIwNTM5NX0.msRmh-jYGjIOHDChgf8VWjiG7bzyIdh0M60YThv9Dtw'; // !!! SUBSTITUIR PELA SUA CHAVE ANON REAL AQUI !!!
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Variáveis de Estado (mantidas como estavam)
     let demandasCache = [];

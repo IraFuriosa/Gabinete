@@ -18,17 +18,8 @@ describe('smoke: integração HTML ↔ JS', () => {
         expect(html).toContain('/src/main.js');
     });
 
-    it('CDN scripts têm versão pinada e SRI', () => {
-        const CDN_TAG = /<script[\s\S]*?cdn\.jsdelivr\.net[\s\S]*?>/g;
-        const cdnTags = html.match(CDN_TAG) ?? [];
-        expect(cdnTags.length).toBeGreaterThan(0);
-        for (const tag of cdnTags) {
-            expect(tag).toMatch(/@\d+\.\d+\.\d+/);
-            expect(tag).toContain('integrity="sha384-');
-        }
-    });
-
-    it('não usa o CDN de desenvolvimento do Tailwind', () => {
+    it('Chart.js e Supabase vêm do bundle npm, não de CDN', () => {
+        expect(html).not.toContain('cdn.jsdelivr.net');
         expect(html).not.toContain('cdn.tailwindcss.com');
     });
 });
