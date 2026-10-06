@@ -1,1947 +1,775 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gerenciador de Gabinete</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    // Configuração do Tailwind para o modo escuro
-    tailwind.config = {
-        darkMode: 'class',
-        theme: {
-            extend: {
-                fontFamily: {
-                    sans: ['Inter', 'sans-serif'],
-                },
-            }
-        }
-    }
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght400;500;600;700&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Inter', sans-serif; }
-    .tab-content { display: none; }
-    .tab-content.active { display: block; }
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Gerenciador de Gabinete</title>
+        <script
+            src="https://cdn.jsdelivr.net/npm/chart.js@4.5.0/dist/chart.umd.js"
+            integrity="sha384-iU8HYtnGQ8Cy4zl7gbNMOhsDTTKX02BTXptVP/vqAWIaTfM7isw76iyZCsjL2eVi"
+            crossorigin="anonymous"
+        ></script>
+        <script
+            src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.47.10/dist/umd/supabase.js"
+            integrity="sha384-8ljL080xacUYrqBXUJRcP68fd1dVCh9qK/xi9QMzxUgOVNycXp0s6mBZAjBMp9W0"
+            crossorigin="anonymous"
+        ></script>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght400;500;600;700&display=swap" rel="stylesheet" />
+        <link rel="stylesheet" href="/src/styles.css" />
+    </head>
+    <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+        <!-- ==== TELA DE LOGIN ==== -->
+        <div
+            id="loginScreen"
+            style="display: flex"
+            class="fixed inset-0 bg-gray-900/90 dark:bg-gray-900/95 backdrop-blur-sm z-50 items-center justify-center p-4"
+        >
+            <div class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-md space-y-6">
+                <!-- Título e Parágrafo com 'select-none' -->
+                <h2 class="text-3xl font-bold text-center text-indigo-600 dark:text-indigo-400 select-none">Gerenciador de Gabinete</h2>
+                <p class="text-center text-gray-600 dark:text-gray-400 select-none">Faça login para continuar</p>
 
-    /* Barra de rolagem customizada para melhor estética */
-    ::-webkit-scrollbar {
-        width: 8px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #f1f1f1;
-        border-radius: 10px;
-    }
-    .dark ::-webkit-scrollbar-track {
-        background: #1f2937;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #888;
-        border-radius: 10px;
-    }
-    .dark ::-webkit-scrollbar-thumb {
-        background: #4b5563;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #555;
-    }
-    .dark ::-webkit-scrollbar-thumb:hover {
-        background: #6b7280;
-    }
+                <form id="loginForm" class="space-y-4">
+                    <div>
+                        <label for="email" class="block text-sm font-medium mb-1">E-mail</label>
+                        <!-- Aplicamos 'select-none' aqui para desabilitar a seleção do valor sugerido -->
+                        <input
+                            type="email"
+                            id="email"
+                            required
+                            autocomplete="email"
+                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white select-none transition"
+                            placeholder="nome@ba.br"
+                        />
+                    </div>
+                    <div>
+                        <label for="password" class="block text-sm font-medium mb-1">Senha</label>
+                        <!-- Aplicamos 'select-none' aqui para desabilitar a seleção do valor sugerido -->
+                        <input
+                            type="password"
+                            id="password"
+                            required
+                            autocomplete="current-password"
+                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white select-none transition"
+                            placeholder="*************"
+                        />
+                    </div>
+                    <button
+                        type="submit"
+                        class="w-full py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out"
+                    >
+                        Entrar
+                    </button>
+                </form>
 
-    /* Estilos para tabela com corpo rolável e cabeçalho fixo */
-    .table-wrapper-scroll-y {
-        display: block;
-        max-height: 60vh; /* Usa 60% da altura da tela, ajuste conforme necessário */
-        overflow-y: auto;
-        position: relative;
-    }
+                <div id="loginMessage" class="text-center text-sm text-red-500 hidden"></div>
 
-    .sticky-header thead {
-        position: -webkit-sticky; /* Para Safari */
-        position: sticky;
-        top: 0;
-        z-index: 10; /* Garante que o cabeçalho fique sobre o conteúdo */
-    }
-
-  </style>
-</head>
-<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
-
-<!-- ==== TELA DE LOGIN ==== -->
-<div id="loginScreen"
-     style="display: flex"
-     class="fixed inset-0 bg-gray-900/90 dark:bg-gray-900/95 backdrop-blur-sm z-50 items-center justify-center p-4">
-    <div class="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-md space-y-6">
-        <!-- Título e Parágrafo com 'select-none' -->
-        <h2 class="text-3xl font-bold text-center text-indigo-600 dark:text-indigo-400 select-none">Gerenciador de Gabinete</h2>
-        <p class="text-center text-gray-600 dark:text-gray-400 select-none">Faça login para continuar</p>
-
-        <form id="loginForm" class="space-y-4">
-            <div>
-                <label for="email" class="block text-sm font-medium mb-1">E-mail</label>
-                <!-- Aplicamos 'select-none' aqui para desabilitar a seleção do valor sugerido -->
-                <input type="email" id="email" required autocomplete="email"
-                       class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white select-none transition"
-                       placeholder="nome@ba.br">
-            </div>
-            <div>
-                <label for="password" class="block text-sm font-medium mb-1">Senha</label>
-                 <!-- Aplicamos 'select-none' aqui para desabilitar a seleção do valor sugerido -->
-                <input type="password" id="password" required autocomplete="current-password"
-                       class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white select-none transition"
-                       placeholder="*************">
-            </div>
-            <button type="submit" class="w-full py-2.5 px-4 border border-transparent rounded-lg shadow-sm text-sm font-semibold text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out">
-                Entrar
-            </button>
-        </form>
-
-        <div id="loginMessage" class="text-center text-sm text-red-500 hidden"></div>
-
-        <button id="toggleDarkModeLogin"
-                class="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"></path></svg>
-        </button>
-    </div>
-</div>
-
-<!-- ==== LAYOUT PRINCIPAL (Após Login) ==== -->
-<div id="mainApp" style="display: none" class="flex h-screen overflow-hidden">
-    <!-- Sidebar -->
-  <div id="sidebar"
-     class="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
-
-
-
-        <div class="flex items-center justify-center h-20 border-b border-gray-200 dark:border-gray-700 p-4">
-            <span class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 select-none">Gabinete</span>
-        </div>
-        <nav class="flex-1 overflow-y-auto p-4 space-y-2">
-            <a href="#" class="tab-link flex items-center p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 active-tab" data-tab="dashboard">
-                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1z"></path></svg>
-                Dashboard
-            </a>
-            <a href="#" class="tab-link flex items-center p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="demandas">
-                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-                Demandas
-            </a>
-            <a href="#" class="tab-link flex items-center p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700" data-tab="contatos">
-                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2a3 3 0 015.356-1.857M7 20h4.444M12 12h.01M17 12h.01M10 5.257V4a1 1 0 011-1h2a1 1 0 011 1v1.257m-4 12V16a1 1 0 011-1h6a1 1 0 011 1v1.257m-8 3H9a1 1 0 00-1 1v1h8v-1a1 1 0 00-1-1h-2"></path></svg>
-                Contatos
-            </a>
-        </nav>
-        <div class="p-4 border-t border-gray-200 dark:border-gray-700">
-            <button id="logoutButton" class="flex items-center w-full p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10">
-                <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m14-12v1a3 3 0 00-3 3H6a3 3 0 00-3 3v3"></path></svg>
-                Sair
-            </button>
-        </div>
-    </div>
-
-    <!-- Conteúdo Principal -->
-    <div class="flex-1 flex flex-col overflow-hidden">
-        <!-- Header -->
-        <header class="h-20 flex items-center justify-between px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
-            <h1 id="pageTitle" class="text-2xl font-bold text-gray-800 dark:text-gray-200">Dashboard</h1>
-            <div class="flex items-center space-x-4">
-                <span id="userName" class="text-lg font-medium hidden sm:block">Usuário</span>
-                <button id="toggleDarkMode"
-                        class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path></svg>
+                <button
+                    id="toggleDarkModeLogin"
+                    class="absolute top-4 right-4 p-2 rounded-full text-gray-400 hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700 dark:hover:text-gray-200 transition"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16.5 12a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0z"
+                        ></path>
+                    </svg>
                 </button>
             </div>
-        </header>
+        </div>
 
-        <!-- Área de Conteúdo das Tabs -->
-<main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-20 lg:pb-8">
-
-            <!-- Tab: Dashboard -->
-            <div id="dashboard" class="tab-content active space-y-8">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                    <!-- Card 1: Total de Contatos -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-                        <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Total de Contatos</h3>
-                        <p id="totalContatos" class="text-4xl font-bold mt-1 text-yellow-600 dark:text-yellow-400">0</p>
-                    </div>
-
-                    <!-- Card 2: Total de Demandas Registradas -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-                        <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Total Demandas Registradas</h3>
-                        <p id="totalDemandasRegistradas" class="text-4xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">0</p>
-                    </div>
-
-                    <!-- Card 3: Demandas em Aberto -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-                        <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Demandas em Aberto</h3>
-                        <p id="demandasEmAberto" class="text-4xl font-bold mt-1 text-red-600 dark:text-red-400">0</p>
-                    </div>
-
-                    <!-- Card 4: Demandas em Andamento -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-                        <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Demandas em Andamento</h3>
-                        <p id="demandasEmAndamento" class="text-4xl font-bold mt-1 text-orange-500 dark:text-orange-400">0</p>
-                    </div>
-
-                    <!-- Card 5: Demandas Concluídas -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300">
-                        <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Demandas Concluídas</h3>
-                        <p id="demandasConcluidas" class="text-4xl font-bold mt-1 text-green-600 dark:text-green-400">0</p>
-                    </div>
+        <!-- ==== LAYOUT PRINCIPAL (Após Login) ==== -->
+        <div id="mainApp" style="display: none" class="flex h-screen overflow-hidden">
+            <!-- Sidebar -->
+            <div id="sidebar" class="hidden lg:flex flex-col w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700">
+                <div class="flex items-center justify-center h-20 border-b border-gray-200 dark:border-gray-700 p-4">
+                    <span class="text-2xl font-bold text-indigo-600 dark:text-indigo-400 select-none">Gabinete</span>
                 </div>
+                <nav class="flex-1 overflow-y-auto p-4 space-y-2">
+                    <a
+                        href="#"
+                        class="tab-link flex items-center p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out bg-indigo-50 dark:bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 active-tab"
+                        data-tab="dashboard"
+                    >
+                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1z"
+                            ></path>
+                        </svg>
+                        Dashboard
+                    </a>
+                    <a
+                        href="#"
+                        class="tab-link flex items-center p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        data-tab="demandas"
+                    >
+                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                            ></path>
+                        </svg>
+                        Demandas
+                    </a>
+                    <a
+                        href="#"
+                        class="tab-link flex items-center p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                        data-tab="contatos"
+                    >
+                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2a3 3 0 015.356-1.857M7 20h4.444M12 12h.01M17 12h.01M10 5.257V4a1 1 0 011-1h2a1 1 0 011 1v1.257m-4 12V16a1 1 0 011-1h6a1 1 0 011 1v1.257m-8 3H9a1 1 0 00-1 1v1h8v-1a1 1 0 00-1-1h-2"
+                            ></path>
+                        </svg>
+                        Contatos
+                    </a>
+                </nav>
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                    <button
+                        id="logoutButton"
+                        class="flex items-center w-full p-3 text-base font-medium rounded-lg transition duration-150 ease-in-out text-red-600 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-500/10"
+                    >
+                        <svg class="w-6 h-6 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3v-3m14-12v1a3 3 0 00-3 3H6a3 3 0 00-3 3v3"
+                            ></path>
+                        </svg>
+                        Sair
+                    </button>
+                </div>
+            </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Gráfico: Demandas por Status -->
-                    <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Distribuição de Demandas</h3>
-                        <div class="h-80">
-                            <canvas id="demandasStatusChart"></canvas>
+            <!-- Conteúdo Principal -->
+            <div class="flex-1 flex flex-col overflow-hidden">
+                <!-- Header -->
+                <header class="h-20 flex items-center justify-between px-6 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
+                    <h1 id="pageTitle" class="text-2xl font-bold text-gray-800 dark:text-gray-200">Dashboard</h1>
+                    <div class="flex items-center space-x-4">
+                        <span id="userName" class="text-lg font-medium hidden sm:block">Usuário</span>
+                        <button
+                            id="toggleDarkMode"
+                            class="p-2 rounded-full text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700 transition"
+                        >
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"
+                                ></path>
+                            </svg>
+                        </button>
+                    </div>
+                </header>
+
+                <!-- Área de Conteúdo das Tabs -->
+                <main class="flex-1 overflow-x-hidden overflow-y-auto bg-gray-50 dark:bg-gray-900 p-6 md:p-8 pb-20 lg:pb-8">
+                    <!-- Tab: Dashboard -->
+                    <div id="dashboard" class="tab-content active space-y-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+                            <!-- Card 1: Total de Contatos -->
+                            <div
+                                class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
+                            >
+                                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Total de Contatos</h3>
+                                <p id="totalContatos" class="text-4xl font-bold mt-1 text-yellow-600 dark:text-yellow-400">0</p>
+                            </div>
+
+                            <!-- Card 2: Total de Demandas Registradas -->
+                            <div
+                                class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
+                            >
+                                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Total Demandas Registradas</h3>
+                                <p id="totalDemandasRegistradas" class="text-4xl font-bold mt-1 text-indigo-600 dark:text-indigo-400">0</p>
+                            </div>
+
+                            <!-- Card 3: Demandas em Aberto -->
+                            <div
+                                class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
+                            >
+                                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Demandas em Aberto</h3>
+                                <p id="demandasEmAberto" class="text-4xl font-bold mt-1 text-red-600 dark:text-red-400">0</p>
+                            </div>
+
+                            <!-- Card 4: Demandas em Andamento -->
+                            <div
+                                class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
+                            >
+                                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Demandas em Andamento</h3>
+                                <p id="demandasEmAndamento" class="text-4xl font-bold mt-1 text-orange-500 dark:text-orange-400">0</p>
+                            </div>
+
+                            <!-- Card 5: Demandas Concluídas -->
+                            <div
+                                class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 hover:shadow-md transition-shadow duration-300"
+                            >
+                                <h3 class="text-lg font-medium text-gray-500 dark:text-gray-400">Demandas Concluídas</h3>
+                                <p id="demandasConcluidas" class="text-4xl font-bold mt-1 text-green-600 dark:text-green-400">0</p>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                            <!-- Gráfico: Demandas por Status -->
+                            <div class="lg:col-span-2 bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                                <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Distribuição de Demandas</h3>
+                                <div class="h-80">
+                                    <canvas id="demandasStatusChart"></canvas>
+                                </div>
+                            </div>
+                            <!-- Top Demandas -->
+                            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                                <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Top 5 Demandas Recentes</h3>
+                                <ul id="topDemandasList" class="space-y-3">
+                                    <li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Carregando...</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
-                    <!-- Top Demandas -->
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                        <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Top 5 Demandas Recentes</h3>
-                        <ul id="topDemandasList" class="space-y-3">
-                            <li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Carregando...</li>
-                        </ul>
-                    </div>
-                </div>
-            </div>
 
+                    <!-- Tab: Demandas -->
+                    <div id="demandas" class="tab-content space-y-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Gestão de Demandas</h2>
+                            <button
+                                id="addDemandButton"
+                                class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 ease-in-out flex items-center font-semibold text-sm"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Nova Demanda
+                            </button>
+                        </div>
 
-            <!-- Tab: Demandas -->
-            <div id="demandas" class="tab-content space-y-6">
-                 <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Gestão de Demandas</h2>
-                    <button id="addDemandButton"
-                            class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 ease-in-out flex items-center font-semibold text-sm">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Nova Demanda
-                    </button>
-                </div>
+                        <!-- Formulário de Demanda (Modal) -->
+                        <div id="demandModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+                            <div
+                                class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg p-6 space-y-6"
+                            >
+                                <h3 id="demandModalTitle" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Adicionar Nova Demanda</h3>
+                                <form id="demandForm" class="space-y-4">
+                                    <input type="hidden" id="demandIdToUpdateInput" value="" />
 
-                <!-- Formulário de Demanda (Modal) -->
-                <div id="demandModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg p-6 space-y-6">
-                        <h3 id="demandModalTitle" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Adicionar Nova Demanda</h3>
-                        <form id="demandForm" class="space-y-4">
-                            <input type="hidden" id="demandIdToUpdateInput" value="">
+                                    <div>
+                                        <label for="demandTitleSelect" class="block text-sm font-medium mb-1">Demanda</label>
+                                        <!-- O select original, agora oculto. Ele armazenará os valores para o formulário. -->
+                                        <select id="demandTitleSelect" name="demandTitle" multiple class="hidden">
+                                            <!-- As opções serão preenchidas via JS -->
+                                        </select>
 
-                            <div>
-                                <label for="demandTitleSelect" class="block text-sm font-medium mb-1">Demanda</label>
-                                <!-- O select original, agora oculto. Ele armazenará os valores para o formulário. -->
-                                <select id="demandTitleSelect" name="demandTitle" multiple class="hidden">
-                                    <!-- As opções serão preenchidas via JS -->
-                                </select>
-
-                                <!-- Componente Customizado de Multiseleção -->
-                                <div id="customDemandSelect" class="relative">
-                                    <!-- A área do "input" que contém as tags e o campo de busca -->
-                                    <div class="flex flex-wrap gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/50 cursor-text" onclick="document.getElementById('demandSearchInput').focus()">
-                                        <div id="demandTagsContainer" class="flex flex-wrap gap-2"></div>
-                                        <input id="demandSearchInput" type="text" class="flex-grow bg-transparent outline-none text-sm min-w-[150px]" placeholder="Selecione ou busque demandas...">
+                                        <!-- Componente Customizado de Multiseleção -->
+                                        <div id="customDemandSelect" class="relative">
+                                            <!-- A área do "input" que contém as tags e o campo de busca -->
+                                            <div
+                                                class="flex flex-wrap gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/50 cursor-text"
+                                                onclick="document.getElementById('demandSearchInput').focus()"
+                                            >
+                                                <div id="demandTagsContainer" class="flex flex-wrap gap-2"></div>
+                                                <input
+                                                    id="demandSearchInput"
+                                                    type="text"
+                                                    class="flex-grow bg-transparent outline-none text-sm min-w-[150px]"
+                                                    placeholder="Selecione ou busque demandas..."
+                                                />
+                                            </div>
+                                            <!-- Dropdown com as opções disponíveis -->
+                                            <div
+                                                id="demandOptionsDropdown"
+                                                class="absolute mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto hidden"
+                                            >
+                                                <!-- Opções serão inseridas aqui via JS -->
+                                            </div>
+                                        </div>
                                     </div>
-                                    <!-- Dropdown com as opções disponíveis -->
-                                    <div id="demandOptionsDropdown" class="absolute mt-1 w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg shadow-lg z-10 max-h-60 overflow-y-auto hidden">
-                                        <!-- Opções serão inseridas aqui via JS -->
+
+                                    <div>
+                                        <label for="demandContactNameSelect" class="block text-sm font-medium mb-1">Nome</label>
+                                        <select
+                                            id="demandContactNameSelect"
+                                            name="demandContact"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        >
+                                            <option value="">Selecione uma demanda</option>
+                                            <!-- As opções serão preenchidas via JS -->
+                                        </select>
                                     </div>
-                                </div>
+
+                                    <div>
+                                        <label for="demandDescription" class="block text-sm font-medium mb-1">Descrição</label>
+                                        <textarea
+                                            id="demandDescription"
+                                            rows="3"
+                                            required
+                                            placeholder="Detalhes da demanda..."
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        ></textarea>
+                                    </div>
+
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label for="demandStartDate" class="block text-sm font-medium mb-1">Data de Registro</label>
+                                            <input
+                                                type="date"
+                                                id="demandStartDate"
+                                                readonly
+                                                class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-700/50 dark:text-white transition cursor-not-allowed"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label for="demandEndDate" class="block text-sm font-medium mb-1">Data de Conclusão</label>
+                                            <input
+                                                type="date"
+                                                id="demandEndDate"
+                                                class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <label for="demandStatus" class="block text-sm font-medium mb-1">Status</label>
+                                        <select
+                                            id="demandStatus"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        >
+                                            <option value="Em Aberto">Em Aberto</option>
+                                            <option value="Em Andamento">Em Andamento</option>
+                                            <option value="Concluída">Concluída</option>
+                                            <option value="Cancelada">Cancelada</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="flex justify-end space-x-3 pt-2">
+                                        <button
+                                            type="button"
+                                            id="closeDemandModalButton"
+                                            class="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-sm"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm"
+                                        >
+                                            Salvar Demanda
+                                        </button>
+                                    </div>
+                                </form>
                             </div>
+                        </div>
 
-                            <div>
-                                <label for="demandContactNameSelect" class="block text-sm font-medium mb-1">Nome</label>
-                                 <select id="demandContactNameSelect" name="demandContact" required class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">
-                                <option value="">Selecione uma demanda</option>
+                        <!-- Filtros para Demandas -->
+                        <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                            <input
+                                type="text"
+                                id="filterDemandasContato"
+                                placeholder="Filtrar por Nome do Contato..."
+                                class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition"
+                            />
+                            <select
+                                id="filterDemandasStatus"
+                                class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition"
+                            >
+                                <option value="">Todos os Status</option>
+                                <option value="Em Aberto">Em Aberto</option>
+                                <option value="Em Andamento">Em Andamento</option>
+                                <option value="Concluída">Concluída</option>
+                                <option value="Cancelada">Cancelada</option>
+                            </select>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    id="clearDemandasFilter"
+                                    class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm"
+                                >
+                                    Limpar
+                                </button>
+                            </div>
+                            <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
+                                <button
+                                    id="exportDemandasCSV"
+                                    class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 transition duration-150 ease-in-out font-semibold text-sm"
+                                >
+                                    Exportar CSV
+                                </button>
+                                <button
+                                    id="importDemandasCSV"
+                                    class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out font-semibold text-sm"
+                                >
+                                    Importar CSV
+                                </button>
+                                <input type="file" id="demandasCsvInput" class="hidden" accept=".csv" />
+                            </div>
+                        </div>
+                        <div
+                            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+                            id="demandas-table-wrapper"
+                        >
+                            <div class="overflow-x-auto bottom-scrollbar-wrapper table-wrapper-scroll-y">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 sticky-header">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                ID
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Demanda
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Nome
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Descrição
+                                            </th>
+                                            <th
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                                                data-sort="data_registro"
+                                            >
+                                                <div class="flex items-center">
+                                                    <span>Data Registro</span>
+                                                    <span class="sort-icon ml-1"></span>
+                                                </div>
+                                            </th>
+                                            <th
+                                                class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer"
+                                                data-sort="data_conclusao"
+                                            >
+                                                <div class="flex items-center">
+                                                    <span>Data Conclusão</span>
+                                                    <span class="sort-icon ml-1"></span>
+                                                </div>
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Status
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Ações
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="demandasList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <!-- Linhas de demanda serão inseridas aqui por JS -->
+                                        <tr>
+                                            <td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando demandas...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tab: Contatos -->
+                    <div id="contatos" class="tab-content space-y-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Gestão de Contatos</h2>
+                            <button
+                                id="addContactButton"
+                                class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 ease-in-out flex items-center font-semibold text-sm"
+                            >
+                                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                </svg>
+                                Novo Contato
+                            </button>
+                        </div>
+
+                        <!-- Formulário de Contato (Modal) -->
+                        <div
+                            id="contactModal"
+                            class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+                        >
+                            <div
+                                class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg p-6 space-y-6"
+                            >
+                                <h3 id="contactModalTitle" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Adicionar Novo Contato</h3>
+                                <form id="contactForm" class="space-y-4">
+                                    <input type="hidden" id="contactIdToUpdateInput" value="" />
+
+                                    <div>
+                                        <label for="contactName" class="block text-sm font-medium mb-1">Nome</label>
+                                        <input
+                                            type="text"
+                                            id="contactName"
+                                            required
+                                            placeholder="Nome completo do contato"
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label for="contactPhone" class="block text-sm font-medium mb-1">Telefone</label>
+                                        <input
+                                            type="text"
+                                            id="contactPhone"
+                                            name="contactPhone"
+                                            maxlength="15"
+                                            required
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label for="contactRegion" class="block text-sm font-medium mb-1">Região</label>
+                                        <!-- CAMPO ALTERADO PARA SELECT (DROPDOWN) -->
+                                        <select
+                                            id="contactRegion"
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        >
+                                            <option value="">Carregando opções...</option>
+                                        </select>
+                                    </div>
+
+                                    <div>
+                                        <label for="contactAddress" class="block text-sm font-medium mb-1">Endereço</label>
+                                        <input
+                                            type="text"
+                                            id="contactAddress"
+                                            placeholder="Rua, Número, CEP"
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        />
+                                    </div>
+
+                                    <div class="flex justify-end space-x-3 pt-2">
+                                        <button
+                                            type="button"
+                                            id="closeContactModalButton"
+                                            class="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-sm"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            type="submit"
+                                            class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm"
+                                        >
+                                            Salvar Contato
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+
+                        <!-- Filtros para Contatos -->
+                        <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
+                            <input
+                                type="text"
+                                id="filterContatosNome"
+                                placeholder="Filtrar por Nome..."
+                                class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition"
+                            />
+                            <select
+                                id="filterContatosRegiao"
+                                class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition"
+                            >
+                                <option value="">Todas as Regiões</option>
                                 <!-- As opções serão preenchidas via JS -->
-                        </select>
+                            </select>
+                            <div class="flex flex-wrap gap-2">
+                                <button
+                                    id="clearContatosFilter"
+                                    class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm"
+                                >
+                                    Limpar
+                                </button>
                             </div>
-
-                            <div>
-                                <label for="demandDescription" class="block text-sm font-medium mb-1">Descrição</label>
-                                <textarea id="demandDescription" rows="3" required placeholder="Detalhes da demanda..." class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"></textarea>
+                            <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
+                                <button
+                                    id="exportContatosCSV"
+                                    class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 transition duration-150 ease-in-out font-semibold text-sm"
+                                >
+                                    Exportar CSV
+                                </button>
+                                <button
+                                    id="importContatosCSV"
+                                    class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out font-semibold text-sm"
+                                >
+                                    Importar CSV
+                                </button>
+                                <input type="file" id="contatosCsvInput" class="hidden" accept=".csv" />
                             </div>
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                    <label for="demandStartDate" class="block text-sm font-medium mb-1">Data de Registro</label>
-                                    <input type="date" id="demandStartDate" readonly
-                                           class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-100 dark:bg-gray-700/50 dark:text-white transition cursor-not-allowed">
-                                </div>
-                                <div>
-                                    <label for="demandEndDate" class="block text-sm font-medium mb-1">Data de Conclusão</label>
-                                    <input type="date" id="demandEndDate"
-                                           class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">
-                                </div>
+                        </div>
+                        <!-- Tabela de Contatos -->
+                        <div
+                            class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden"
+                            id="contatos-table-wrapper"
+                        >
+                            <div class="overflow-x-auto bottom-scrollbar-wrapper table-wrapper-scroll-y">
+                                <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 sticky-header">
+                                    <thead class="bg-gray-50 dark:bg-gray-700">
+                                        <tr>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                ID
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Nome
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Telefone
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Região
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Endereço
+                                            </th>
+                                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                                                Ações
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="contatosList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                                        <!-- Linhas de contato serão inseridas aqui por JS -->
+                                        <tr>
+                                            <td colspan="6" class="px-6 py-4 text-center text-gray-500">Carregando contatos...</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
+                        </div>
+                    </div>
 
-                            <div>
-                                <label for="demandStatus" class="block text-sm font-medium mb-1">Status</label>
-                                <select id="demandStatus" required class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">
-                                    <option value="Em Aberto">Em Aberto</option>
-                                    <option value="Em Andamento">Em Andamento</option>
-                                    <option value="Concluída">Concluída</option>
-                                    <option value="Cancelada">Cancelada</option>
-                                </select>
+                    <!-- Tab: Configurações (Apenas Dark Mode) -->
+                    <div id="configuracoes" class="tab-content space-y-6">
+                        <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200">Configurações</h2>
+                        <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                            <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Preferências de Visualização</h3>
+                            <div class="flex items-center justify-between">
+                                <label for="darkModeToggleSetting" class="text-lg">Modo Escuro</label>
+                                <label class="relative inline-flex items-center cursor-pointer">
+                                    <input type="checkbox" value="" id="darkModeToggleSetting" class="sr-only peer" />
+                                    <div
+                                        class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"
+                                    ></div>
+                                </label>
                             </div>
+                        </div>
+                    </div>
 
+                    <!-- Modal de Mensagens Genéricas -->
+                    <div id="genericModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
+                            <h3 id="modalTitle" class="text-xl font-bold text-indigo-600 dark:text-indigo-400"></h3>
+                            <p id="modalMessage" class="text-gray-700 dark:text-gray-300"></p>
+                            <div class="flex justify-end">
+                                <button
+                                    id="closeGenericModalButton"
+                                    class="py-2 px-4 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal de Confirmação de Exclusão -->
+                    <div
+                        id="confirmDeleteModal"
+                        class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+                    >
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
+                            <h3 id="confirmDeleteTitle" class="text-xl font-bold text-red-600 dark:text-red-400">Confirmar Exclusão</h3>
+                            <p id="confirmDeleteMessage" class="text-gray-700 dark:text-gray-300">
+                                Você tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.
+                            </p>
                             <div class="flex justify-end space-x-3 pt-2">
-                                <button type="button" id="closeDemandModalButton"
-                                        class="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-sm">
+                                <button
+                                    id="cancelDeleteButton"
+                                    class="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-sm"
+                                >
                                     Cancelar
                                 </button>
-                                <button type="submit"
-                                        class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm">
-                                    Salvar Demanda
+                                <button
+                                    id="confirmDeleteButton"
+                                    class="py-2 px-4 rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 transition font-semibold text-sm"
+                                >
+                                    Excluir
                                 </button>
                             </div>
-                        </form>
+                        </div>
                     </div>
-                </div>
-
-            <!-- Filtros para Demandas -->
-    <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-        <input type="text" id="filterDemandasContato" placeholder="Filtrar por Nome do Contato..." class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
-        <select id="filterDemandasStatus" class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
-        <option value="">Todos os Status</option>
-        <option value="Em Aberto">Em Aberto</option>
-        <option value="Em Andamento">Em Andamento</option>
-        <option value="Concluída">Concluída</option>
-        <option value="Cancelada">Cancelada</option>
-    </select>
-    <div class="flex flex-wrap gap-2">
-        <button id="clearDemandasFilter" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm">Limpar</button>
-    </div>
-    <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
-        <button id="exportDemandasCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 transition duration-150 ease-in-out font-semibold text-sm">Exportar CSV</button>
-        <button id="importDemandasCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out font-semibold text-sm">Importar CSV</button>
-        <input type="file" id="demandasCsvInput" class="hidden" accept=".csv">
-    </div>
-</div>
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" id="demandas-table-wrapper">
-                    <div class="overflow-x-auto bottom-scrollbar-wrapper table-wrapper-scroll-y">
-                         <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 sticky-header">
-                            <thead class="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Demanda</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nome</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Descrição</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" data-sort="data_registro">
-                                        <div class="flex items-center">
-                                            <span>Data Registro</span>
-                                            <span class="sort-icon ml-1"></span>
-                                        </div>
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer" data-sort="data_conclusao">
-                                        <div class="flex items-center">
-                                            <span>Data Conclusão</span>
-                                            <span class="sort-icon ml-1"></span>
-                                        </div>
-                                    </th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Status</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="demandasList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                <!-- Linhas de demanda serão inseridas aqui por JS -->
-                                <tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando demandas...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+                </main>
             </div>
+        </div>
 
-            <!-- Tab: Contatos -->
-            <div id="contatos" class="tab-content space-y-6">
-                <div class="flex justify-between items-center mb-6">
-                    <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-200">Gestão de Contatos</h2>
-                    <button id="addContactButton"
-                            class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition duration-150 ease-in-out flex items-center font-semibold text-sm">
-                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
-                        Novo Contato
-                    </button>
-                </div>
-
-                <!-- Formulário de Contato (Modal) -->
-                <div id="contactModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-                    <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-lg p-6 space-y-6">
-                        <h3 id="contactModalTitle" class="text-2xl font-bold text-indigo-600 dark:text-indigo-400">Adicionar Novo Contato</h3>
-                        <form id="contactForm" class="space-y-4">
-                            <input type="hidden" id="contactIdToUpdateInput" value="">
-
-                            <div>
-                                <label for="contactName" class="block text-sm font-medium mb-1">Nome</label>
-                                <input type="text" id="contactName" required placeholder="Nome completo do contato" class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">
-                            </div>
-
-                            <div>
-                                <label for="contactPhone" class="block text-sm font-medium mb-1">Telefone</label>
-                                <input type="text" id="contactPhone" name="contactPhone" maxlength="15" required class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">              </div>
-                             <div>
-                                <label for="contactRegion" class="block text-sm font-medium mb-1">Região</label>
-                                <!-- CAMPO ALTERADO PARA SELECT (DROPDOWN) -->
-                                <select id="contactRegion" class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">
-                                    <option value="">Carregando opções...</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label for="contactAddress" class="block text-sm font-medium mb-1">Endereço</label>
-                                <input type="text" id="contactAddress" placeholder="Rua, Número, CEP" class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition">
-                            </div>
-
-                            <div class="flex justify-end space-x-3 pt-2">
-                                <button type="button" id="closeContactModalButton"
-                                        class="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-sm">
-                                    Cancelar
-                                </button>
-                                <button type="submit"
-                                        class="py-2 px-4 rounded-lg shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm">
-                                    Salvar Contato
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-
-            <!-- Filtros para Contatos -->
-    <div class="mb-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-center">
-        <input type="text" id="filterContatosNome" placeholder="Filtrar por Nome..." class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
-        <select id="filterContatosRegiao" class="px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white dark:bg-gray-800 dark:text-white transition">
-        <option value="">Todas as Regiões</option>
-        <!-- As opções serão preenchidas via JS -->
-    </select>
-    <div class="flex flex-wrap gap-2">
-        <button id="clearContatosFilter" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-gray-500 hover:bg-gray-600 transition duration-150 ease-in-out font-semibold text-sm">Limpar</button>
-    </div>
-     <div class="flex flex-wrap gap-2 sm:col-span-2 lg:col-span-1">
-        <button id="exportContatosCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-green-600 hover:bg-green-700 transition duration-150 ease-in-out font-semibold text-sm">Exportar CSV</button>
-        <button id="importContatosCSV" class="flex-grow py-2 px-4 rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 transition duration-150 ease-in-out font-semibold text-sm">Importar CSV</button>
-        <input type="file" id="contatosCsvInput" class="hidden" accept=".csv">
-    </div>
-</div>
-                <!-- Tabela de Contatos -->
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden" id="contatos-table-wrapper">
-                    <div class="overflow-x-auto bottom-scrollbar-wrapper table-wrapper-scroll-y">
-                        <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700 sticky-header">
-                            <thead class="bg-gray-50 dark:bg-gray-700">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">ID</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Nome</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Telefone</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Região</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Endereço</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="contatosList" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
-                                <!-- Linhas de contato serão inseridas aqui por JS -->
-                                <tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Carregando contatos...</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        <script type="module" src="/src/main.js"></script>
+        <nav
+            id="bottom-nav"
+            class="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-2xl z-40"
+        >
+            <div class="flex h-full justify-around items-center">
+                <a
+                    href="#"
+                    class="tab-link flex flex-col items-center justify-center h-full w-full text-indigo-600 dark:text-indigo-400 active-tab-mobile"
+                    data-tab="dashboard"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1z"
+                        ></path>
+                    </svg>
+                    <span class="text-xs mt-1">Dash</span>
+                </a>
+                <a
+                    href="#"
+                    class="tab-link flex flex-col items-center justify-center h-full w-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    data-tab="demandas"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"
+                        ></path>
+                    </svg>
+                    <span class="text-xs mt-1">Demandas</span>
+                </a>
+                <a
+                    href="#"
+                    class="tab-link flex flex-col items-center justify-center h-full w-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    data-tab="contatos"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2a3 3 0 015.356-1.857M7 20h4.444M12 12h.01M17 12h.01M10 5.257V4a1 1 0 011-1h2a1 1 0 011 1v1.257m-4 12V16a1 1 0 011-1h6a1 1 0 011 1v1.257m-8 3H9a1 1 0 00-1 1v1h8v-1a1 1 0 00-1-1h-2"
+                        ></path>
+                    </svg>
+                    <span class="text-xs mt-1">Contatos</span>
+                </a>
+                <a
+                    href="#"
+                    class="tab-link flex flex-col items-center justify-center h-full w-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                    data-tab="configuracoes"
+                >
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)">
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"
+                        ></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    <span class="text-xs mt-1">Config.</span>
+                </a>
             </div>
-
-            <!-- Tab: Configurações (Apenas Dark Mode) -->
-            <div id="configuracoes" class="tab-content space-y-6">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800 dark:text-gray-200">Configurações</h2>
-                 <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
-                    <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Preferências de Visualização</h3>
-                    <div class="flex items-center justify-between">
-                        <label for="darkModeToggleSetting" class="text-lg">Modo Escuro</label>
-                        <label class="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" value="" id="darkModeToggleSetting" class="sr-only peer">
-                            <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"></div>
-                        </label>
-                    </div>
-                </div>
-            </div>
-
-
-            <!-- Modal de Mensagens Genéricas -->
-            <div id="genericModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
-                    <h3 id="modalTitle" class="text-xl font-bold text-indigo-600 dark:text-indigo-400"></h3>
-                    <p id="modalMessage" class="text-gray-700 dark:text-gray-300"></p>
-                    <div class="flex justify-end">
-                        <button id="closeGenericModalButton"
-                                class="py-2 px-4 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm">
-                            Fechar
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Modal de Confirmação de Exclusão -->
-            <div id="confirmDeleteModal" class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-                <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
-                    <h3 id="confirmDeleteTitle" class="text-xl font-bold text-red-600 dark:text-red-400">Confirmar Exclusão</h3>
-                    <p id="confirmDeleteMessage" class="text-gray-700 dark:text-gray-300">Você tem certeza que deseja excluir este item? Esta ação não pode ser desfeita.</p>
-                    <div class="flex justify-end space-x-3 pt-2">
-                        <button id="cancelDeleteButton"
-                                class="py-2 px-4 rounded-lg text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 hover:bg-gray-200 dark:hover:bg-gray-600 transition font-semibold text-sm">
-                            Cancelar
-                        </button>
-                        <button id="confirmDeleteButton"
-                                class="py-2 px-4 rounded-lg shadow-sm text-white bg-red-600 hover:bg-red-700 transition font-semibold text-sm">
-                            Excluir
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-        </main>
-    </div>
-</div>
-
-<script>
-    window.onload = function () {
-        // Verifica se o usuário estava autenticado anteriormente
-        const storedAuth = sessionStorage.getItem('isAuthenticated');
-        const storedEmail = sessionStorage.getItem('userEmail'); // Opcional: para reutilizar o nome/email
-        let isAuthenticated = (storedAuth === 'true'); // Converte string de volta para booleano
-
-        // Configuração do Supabase Client (mantida como estava)
-        const SUPABASE_URL = 'https://czixoasuvhpxrldypzpz.supabase.co'; // !!! SUBSTITUIR PELA SUA URL REAL AQUI !!!
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aXhvYXN1dmhweHJsZHlwenB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzOTUsImV4cCI6MjA3NDIwNTM5NX0.msRmh-jYGjIOHDChgf8VWjiG7bzyIdh0M60YThv9Dtw'; // !!! SUBSTITUIR PELA SUA CHAVE ANON REAL AQUI !!!
-        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-        // Variáveis de Estado (mantidas como estavam)
-        let demandasCache = [];
-        let contatosCache = [];
-        let statusChart;
-        let sortColumn = 'updated_at';
-        let sortDirection = 'desc';
-
-        // Lógica de inicialização baseada no estado de autenticação
-        if (isAuthenticated) {
-            // O usuário estava autenticado na última sessão
-            document.getElementById('loginScreen').style.display = 'none';
-            document.getElementById('mainApp').style.display = 'flex';
-            if (storedEmail) {
-                document.getElementById('userName').textContent = storedEmail; // Restaura o nome/email do usuário
-            }
-            // Tenta carregar os dados iniciais
-            initializeCharts(); // Inicializa gráficos para evitar erros
-            carregarContatos(); // Carrega contatos
-            carregarDemandas(); // Carrega demandas
-        } else {
-            // O usuário não estava autenticado ou o localStorage foi limpo
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('mainApp').style.display = 'none';
-            // Não é necessário fazer mais nada aqui, a tela de login já está visível
-        }
-
-        // =========================================================================================
-        // FUNÇÕES DE UTILIDADE E INTERAÇÃO
-        // =========================================================================================
-
-        // =========================================================================================
-        // FUNÇÕES DE EXPORTAÇÃO E IMPORTAÇÃO CSV
-        // =========================================================================================
-
-        function exportToCSV(data, filename) {
-            if (!data || data.length === 0) {
-                showModal("Aviso", "Não há dados para exportar.");
-                return;
-            }
-
-            const headers = Object.keys(data[0]);
-            // Remove o ID da exportação para evitar confusão na re-importação
-            const filteredHeaders = headers.filter(h => h !== 'ID');
-
-            const csvRows = [filteredHeaders.join(',')]; // Cabeçalho
-
-            for (const row of data) {
-                const values = filteredHeaders.map(header => {
-                    let value = row[header];
-                    if (value === null || value === undefined) {
-                        value = '';
-                    } else if (Array.isArray(value)) {
-                        // Se for um array (como em 'demanda'), junta com ';' para evitar conflito com a vírgula do CSV
-                        value = `"${value.join('; ')}"`;
-                    } else {
-                        const stringValue = String(value);
-                        // Se o valor contém vírgula, aspas ou quebra de linha, coloca entre aspas
-                        if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
-                            value = `"${stringValue.replace(/"/g, '""')}"`; // Escapa aspas duplas
-                        }
-                    }
-                    return value;
-                });
-                csvRows.push(values.join(','));
-            }
-
-            const csvString = csvRows.join('\n');
-            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
-
-            const link = document.createElement("a");
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", filename);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            }
-        }
-
-        function handleCsvImport(file, tableName, requiredFields, callback) {
-            if (!file) return;
-
-            // Get user first
-            supabase.auth.getUser().then(({ data: { user } }) => {
-                if (!user) {
-                    showModal("Erro", "Você não está autenticado para importar dados.");
-                    return;
-                }
-
-                const reader = new FileReader();
-                reader.onload = async (event) => {
-                    const csv = event.target.result;
-                    const lines = csv.split(/\r\n|\n/);
-                    if (lines.length < 2) {
-                        showModal("Erro de Importação", "O arquivo CSV está vazio ou não contém dados.");
-                        return;
-                    }
-
-                    const headers = lines[0].split(',').map(h => h.trim().replace(/"/g, ''));
-                    const dataToInsert = [];
-
-                    for (let i = 1; i < lines.length; i++) {
-                        const line = lines[i];
-                        if (!line.trim()) continue;
-
-                        const values = line.split(','); // Simplificado: não lida com vírgulas dentro de aspas
-                        const obj = { user_id: user.id }; // Add user_id here
-                        for (let j = 0; j < headers.length; j++) {
-                            let value = values[j] ? values[j].trim().replace(/"/g, '') : '';
-                            // Tratamento especial para o campo 'demanda' que pode ser múltiplo
-                            if (headers[j] === 'demanda' && value.includes(';')) {
-                                obj[headers[j]] = value.split(';').map(s => s.trim());
-                            } else {
-                                obj[headers[j]] = value;
-                            }
-                        }
-
-                        // Validação simples
-                        const hasRequired = requiredFields.every(field => obj[field] && obj[field] !== '');
-                        if (hasRequired) {
-                            dataToInsert.push(obj);
-                        } else {
-                            console.warn(`Linha ${i + 1} ignorada por falta de campos obrigatórios.`);
-                        }
-                    }
-
-                    if (dataToInsert.length > 0) {
-                        const { error } = await supabase.from(tableName).insert(dataToInsert);
-                        if (error) {
-                            showModal("Erro de Importação", `Falha ao importar dados: ${error.message}`);
-                        } else {
-                            showModal("Sucesso", `${dataToInsert.length} registros importados com sucesso!`);
-                            callback(); // Recarrega os dados da tabela
-                        }
-                    } else {
-                        showModal("Aviso", "Nenhum registro válido encontrado no arquivo para importação.");
-                    }
-                };
-                reader.onerror = () => {
-                    showModal("Erro de Leitura", "Não foi possível ler o arquivo selecionado.");
-                };
-                reader.readAsText(file);
-            });
-        }
-
-
-        // NOVO: Função centralizada para lidar com ações (Edição e Exclusão)
-async function handleDemandAction(action, id) {
-    if (action === 'edit') {
-        // CORREÇÃO: Busca usando o ID real (d.ID), que é o valor em data-id do botão.
-        const demanda = demandasCache.find(d => String(d.ID) === id);
-
-        if (demanda) {
-            // Chamadas essenciais para garantir que os SELECTs estejam populados antes de abrir
-            await loadDemandasOptions();
-            populateContactSelect();
-
-            // Configurações e Abertura do Modal
-            document.getElementById('demandModalTitle').textContent = `Editar Demanda #${id}`;
-            document.getElementById('demandIdToUpdateInput').value = id;
-
-            // Preenchimento dos campos
-            // Limpa seleções anteriores e seleciona as opções corretas para multiselect
-            const demandValues = Array.isArray(demanda.demanda) ? demanda.demanda.map(v => v.trim()) : [demanda.demanda.trim()];
-            
-            // Limpa o componente customizado e o preenche com os valores existentes
-            document.getElementById('demandTagsContainer').innerHTML = '';
-            demandValues.forEach(value => {
-                // Adiciona a tag visual e atualiza o select oculto
-                addDemandTag(value);
-            });
-            document.getElementById('demandContactNameSelect').value = demanda.contato;
-            document.getElementById('demandDescription').value = demanda.descricao;
-            document.getElementById('demandStartDate').value = demanda.data_registro || '';
-            document.getElementById('demandEndDate').value = demanda.data_conclusao || '';
-            document.getElementById('demandStatus').value = demanda.status;
-
-            document.getElementById('demandModal').classList.remove('hidden');
-        } else {
-            showModal("Erro", "Demanda não encontrada para edição.");
-        }
-    } else if (action === 'delete') {
-        // Abre o modal de confirmação e passa a função de exclusão como callback
-        openConfirmationModal(`a demanda #${id}`, async () => {
-            const { error } = await supabase
-                .from('Demandas Ativas')
-                .delete()
-                .eq('ID', id);
-
-            if (error) {
-                console.error("Erro ao excluir demanda:", error);
-                showModal("Erro", `Erro ao excluir demanda: ${error.message}`);
-            } else {
-                await carregarDemandas();
-                showModal("Sucesso", "Demanda excluída com sucesso!");
-            }
-        });
-    } else {
-        console.error(`Ação desconhecida: ${action}`);
-    }
-}
-
-        function showModal(title, message) {
-            document.getElementById('modalTitle').textContent = title;
-            document.getElementById('modalMessage').textContent = message;
-            document.getElementById('genericModal').classList.remove('hidden');
-        }
-
-        document.getElementById('closeGenericModalButton').addEventListener('click', () => {
-            document.getElementById('genericModal').classList.add('hidden');
-        });
-
-        function toggleDarkMode(isDark) {
-            if (isDark) {
-                document.documentElement.classList.add('dark');
-                localStorage.setItem('theme', 'dark');
-            } else {
-                document.documentElement.classList.remove('dark');
-                localStorage.setItem('theme', 'light');
-            }
-            document.getElementById('darkModeToggleSetting').checked = isDark;
-        }
-
-        // Aplica o tema salvo ou o padrão do sistema
-        const savedTheme = localStorage.getItem('theme');
-        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        const initialDark = savedTheme === 'dark' || (savedTheme === null && prefersDark);
-        toggleDarkMode(initialDark);
-
-
-        // Função para renderizar a tabela de Demandas
-        function renderDemandas() {
-            const list = document.getElementById('demandasList');
-            list.innerHTML = ''; // Limpa a lista atual
- 
-            if (demandasCache.length === 0) {
-                list.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Nenhuma demanda ativa encontrada.</td></tr>';
-                return;
-            }
- 
-            // O cache já está ordenado pelo mais novo (no carregarDemandas)
-            demandasCache.forEach((demanda, index) => { // Adiciona 'index' para o ID sequencial
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
-                row.innerHTML = `
-                    <!-- ID Sequencial (index + 1) em vez do ID real do Supabase -->
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${Array.isArray(demanda.demanda) ? demanda.demanda.join(', ') : demanda.demanda}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.contato}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.descricao}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_registro ? new Date(demanda.data_registro).toLocaleDateString('pt-BR') : '-'}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_conclusao ? new Date(demanda.data_conclusao).toLocaleDateString('pt-BR') : '-'}</td>
-                    <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.status}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <!-- Botões de ação ainda usam o ID real (demanda.ID) para as operações CRUD -->
-                        <button data-id="${demanda.ID}" class="edit-demand-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
-                        <button data-id="${demanda.ID}" class="delete-demand-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
-                    </td>
-                `;
-                list.appendChild(row);
-            });
- 
-            // Adiciona listeners de evento para os botões de edição/exclusão
-            document.querySelectorAll('.edit-demand-btn').forEach(button => {
-    button.addEventListener('click', (e) => {
-        handleDemandAction('edit', e.target.dataset.id);
-    });
-});
-document.querySelectorAll('.delete-demand-btn').forEach(button => {
-    button.addEventListener('click', (e) => {
-        handleDemandAction('delete', e.target.dataset.id);
-    });
-});
-        }
-
-        // Função para renderizar a tabela de Contatos
-        function renderContatos() {
-            const list = document.getElementById('contatosList');
-            list.innerHTML = ''; // Limpa a lista atual
-
-            if (contatosCache.length === 0) {
-                list.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum contato encontrado.</td></tr>';
-                return;
-            }
-
-            // O cache já está ordenado pelo mais novo (no carregarContatos)
-            contatosCache.forEach((contato, index) => { // Adiciona 'index' para o ID sequencial
-                const row = document.createElement('tr');
-                row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
-                row.innerHTML = `
-                    <!-- ID Sequencial (index + 1) em vez do ID real do Supabase -->
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.nome}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.telefone || '-'}</td> <!-- Coluna Telefone -->
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.regiao || '-'}</td> <!-- Coluna Região -->
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.endereco || '-'}</td> <!-- Coluna Endereço -->
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                        <!-- Botões de ação ainda usam o ID real (contato.ID) para as operações CRUD -->
-                        <button data-id="${contato.ID}" class="edit-contact-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
-                        <button data-id="${contato.ID}" class="delete-contact-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
-                    </td>
-                `;
-                list.appendChild(row);
-            });
-
-            // Adiciona listeners de evento para os botões de edição/exclusão
-            document.querySelectorAll('.edit-contact-btn').forEach(button => {
-                button.addEventListener('click', (e) => openEditContactModal(e.target.dataset.id));
-            });
-            document.querySelectorAll('.delete-contact-btn').forEach(button => {
-                button.addEventListener('click', (e) => deleteContact(e.target.dataset.id));
-            });
-        }
-
-        // Funções de Inicialização de Gráficos (Dashboard)
-        function initializeCharts() {
-            const ctx = document.getElementById('demandasStatusChart').getContext('2d');
-            if (statusChart) {
-                statusChart.destroy();
-            }
-            statusChart = new Chart(ctx, {
-                type: 'pie',
-                data: {
-                    // Labels atualizadas para refletir os novos status em pt-BR
-                    labels: ['Em Aberto', 'Em Andamento', 'Concluída', 'Cancelada'],
-                    datasets: [{
-                        data: [0, 0, 0, 0], // Inicializa com 0
-                        backgroundColor: ['#ef4444', '#f97316', '#10b981', '#6b7280'], // Vermelho, Laranja, Verde, Cinza
-                        hoverOffset: 4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            position: 'top',
-                            labels: {
-                                color: document.documentElement.classList.contains('dark') ? '#d1d5db' : '#374151'
-                            }
-                        },
-                        title: {
-                            display: false,
-                        }
-                    }
-                }
-            });
-        }
-
-        // Função crucial atualizada para contabilizar e exibir as novas métricas
-        function formatDemandaDisplay(demandaData) {
-            if (typeof demandaData === 'string' && demandaData.startsWith('[')) {
-                try {
-                    const parsed = JSON.parse(demandaData);
-                    if (Array.isArray(parsed)) {
-                        return parsed.join(', ');
-                    }
-                } catch (e) {
-                    // Not a valid JSON string, return as is
-                }
-            } else if (Array.isArray(demandaData)) {
-                return demandaData.join(', ');
-            }
-            return demandaData;
-        }
-
-        function updateDashboardMetrics() {
-            // Métrica 1: Total de Contatos
-            const totalContatos = contatosCache.length;
-            const totalContatosEl = document.getElementById('totalContatos');
-            if (totalContatosEl) totalContatosEl.textContent = totalContatos;
-
-            // Métrica 2: Total de Demandas Registradas
-            const totalDemandasRegistradas = demandasCache.length;
-            const totalDemandasRegistradasEl = document.getElementById('totalDemandasRegistradas');
-            if (totalDemandasRegistradasEl) totalDemandasRegistradasEl.textContent = totalDemandasRegistradas;
-
-            // Contagem por Status usando o cache de demandas
-            const statusCounts = demandasCache.reduce((acc, demanda) => {
-                // Usa o status exato em pt-BR
-                acc[demanda.status] = (acc[demanda.status] || 0) + 1;
-                return acc;
-            }, {});
-
-            // Métrica 3: Demandas em Aberto (Status: "Em Aberto")
-            const emAberto = statusCounts['Em Aberto'] || 0;
-            const emAbertoEl = document.getElementById('demandasEmAberto');
-            if (emAbertoEl) emAbertoEl.textContent = emAberto;
-
-            // Métrica 4: Demandas em Andamento (Status: "Em Andamento")
-            const emAndamento = statusCounts['Em Andamento'] || 0;
-            const emAndamentoEl = document.getElementById('demandasEmAndamento');
-            if (emAndamentoEl) emAndamentoEl.textContent = emAndamento;
-
-            // Métrica 5: Demandas Concluídas (Status: "Concluída")
-            const concluidas = statusCounts['Concluída'] || 0;
-            const concluidasEl = document.getElementById('demandasConcluidas');
-            if (concluidasEl) concluidasEl.textContent = concluidas;
-
-            // Atualiza o gráfico
-            const cancelada = statusCounts['Cancelada'] || 0;
-            if (statusChart) {
-                // A ordem dos dados DEVE corresponder à ordem das labels no initializeCharts
-                statusChart.data.datasets[0].data = [emAberto, emAndamento, concluidas, cancelada];
-                statusChart.update();
-            }
-
-            // Top 5 Demandas (simplificado: 5 mais recentes)
-            const topList = document.getElementById('topDemandasList');
-            if (topList) { // Verifica se o elemento Top List existe
-                topList.innerHTML = '';
-                if (demandasCache.length === 0) {
-                    topList.innerHTML = '<li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Nenhuma demanda ainda.</li>';
-                } else {
-                    // Cria uma cópia do cache e ordena por 'updated_at' (ou 'data_registro' como fallback)
-                    const sortedDemandas = [...demandasCache].sort((a, b) => {
-                        const dateA = new Date(a.updated_at || a.data_registro);
-                        const dateB = new Date(b.updated_at || b.data_registro);
-                        return dateB - dateA; // Ordena do mais recente para o mais antigo
-                    });
-
-                    sortedDemandas.slice(0, 5).forEach(demanda => {
-                        const li = document.createElement('li');
-                        li.className = 'p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium flex justify-between items-center';
-                        li.innerHTML = `
-                            <span>${formatDemandaDisplay(demanda.demanda)} (${demanda.contato})</span>
-                            <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">${demanda.status}</span>
-                        `;
-                        topList.appendChild(li);
-                    });
-                }
-            }
-        }
-
-        // --- FILTROS ---
-
-// Função debounce para otimizar filtros de texto
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
-}
-
-// Estados dos filtros
-let demandasFilters = {
-    contato: '',
-    status: ''
-};
-let contatosFilters = {
-    nome: '',
-    regiao: ''
-};
-
-// Função para atualizar as opções de filtro de Região em Contatos
-function updateContatosRegiaoFilterOptions() {
-    const select = document.getElementById('filterContatosRegiao');
-    select.innerHTML = '<option value="">Todas as Regiões</option>'; // Placeholder
-
-    // Extrai regiões únicas do cache de contatos
-    const allRegioes = contatosCache.map(c => c.regiao).filter(r => r && r.trim() !== '');
-    const uniqueRegioes = [...new Set(allRegioes)].sort();
-
-    uniqueRegioes.forEach(regiao => {
-        const option = document.createElement('option');
-        option.value = regiao;
-        option.textContent = regiao;
-        select.appendChild(option);
-    });
-}
-
-// Função para atualizar as opções de filtro de Status em Demandas
-function updateDemandasStatusFilterOptions() {
-    const select = document.getElementById('filterDemandasStatus');
-    // As opções padrão já estão no HTML, mas se quiser atualizar com base no cache:
-    // const allStatus = demandasCache.map(d => d.status).filter(s => s && s.trim() !== '');
-    // const uniqueStatus = [...new Set(allStatus)].sort();
-    // select.innerHTML = '<option value="">Todos os Status</option>';
-    // uniqueStatus.forEach(status => {
-    //     const option = document.createElement('option');
-    //     option.value = status;
-    //     option.textContent = status;
-    //     select.appendChild(option);
-    // });
-    // Por simplicidade, usaremos as opções fixas no HTML.
-}
-
-// Função para aplicar o filtro em Demandas
-// Função para atualizar os campos de filtro de Demandas
-function updateDemandasFilterInputs() {
-    document.getElementById('filterDemandasContato').value = demandasFilters.contato;
-    document.getElementById('filterDemandasStatus').value = demandasFilters.status;
-}
-
-// Função para aplicar o filtro em Demandas
-function applyDemandasFilter() {
-    let filtered = demandasCache;
-
-    if (demandasFilters.contato) {
-        filtered = filtered.filter(d => d.contato.toLowerCase().includes(demandasFilters.contato.toLowerCase()));
-    }
-    if (demandasFilters.status) {
-        filtered = filtered.filter(d => d.status === demandasFilters.status);
-    }
-
-    // NEW: Sorting logic is moved here
-    const statusOrder = { 'Em Aberto': 1, 'Em Andamento': 2, 'Concluída': 3, 'Cancelada': 4 };
-    const sortAsc = sortDirection === 'asc';
-
-    filtered.sort((a, b) => {
-        const orderA = statusOrder[a.status] || 99;
-        const orderB = statusOrder[b.status] || 99;
-        if (orderA !== orderB) {
-            return orderA - orderB;
-        }
-        // Secondary sort (the one user selected)
-        const valA = a[sortColumn];
-        const valB = b[sortColumn];
-
-        // Handle null or undefined values
-        if (valA == null && valB == null) return 0;
-        if (valA == null) return 1; // nulls last
-        if (valB == null) return -1;
-
-        if (valA < valB) return sortAsc ? -1 : 1;
-        if (valA > valB) return sortAsc ? 1 : -1;
-        return 0;
-    });
-
-
-    // Re-renderiza a tabela com os dados filtrados E ORDENADOS
-    renderDemandas(filtered);
-    updateDemandasFilterInputs(); // NEW: Update filter input fields
-}
-
-// Função para aplicar o filtro em Contatos
-// Função para atualizar os campos de filtro de Contatos
-function updateContatosFilterInputs() {
-    document.getElementById('filterContatosNome').value = contatosFilters.nome;
-    document.getElementById('filterContatosRegiao').value = contatosFilters.regiao;
-}
-
-// Função para aplicar o filtro em Contatos
-function applyContatosFilter() {
-    let filtered = contatosCache;
-
-    if (contatosFilters.nome) {
-        filtered = filtered.filter(c => c.nome.toLowerCase().includes(contatosFilters.nome.toLowerCase()));
-    }
-    if (contatosFilters.regiao) {
-        filtered = filtered.filter(c => c.regiao === contatosFilters.regiao);
-    }
-
-    // Re-renderiza a tabela com os dados filtrados
-    renderContatos(filtered);
-    updateContatosFilterInputs(); // NEW: Update filter input fields
-}
-
-// Função para renderizar Demandas com filtros aplicados (recebe o array filtrado)
-function renderDemandas(dataToRender = demandasCache) {
-    const list = document.getElementById('demandasList');
-    list.innerHTML = ''; // Limpa a lista atual
-
-    if (dataToRender.length === 0) {
-        list.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Nenhuma demanda encontrada.</td></tr>';
-        return;
-    }
-
-    let separatorAdded = false;
-    dataToRender.forEach((demanda, index) => {
-        const isInactive = demanda.status === 'Concluída' || demanda.status === 'Cancelada';
-
-        if (isInactive && !separatorAdded) {
-            const separatorRow = document.createElement('tr');
-            separatorRow.className = 'demand-separator';
-            separatorRow.innerHTML = `
-                <td colspan="8" class="px-6 py-2 text-center text-sm font-semibold text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-700/50 sticky top-0 z-[9]">
-                    Demandas Inativas
-                </td>
-            `;
-            list.appendChild(separatorRow);
-            separatorAdded = true;
-        }
-
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out' + (isInactive ? ' opacity-60' : '');
-        row.innerHTML = `
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${formatDemandaDisplay(demanda.demanda)}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.contato}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.descricao}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_registro ? new Date(demanda.data_registro).toLocaleDateString('pt-BR') : '-'}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.data_conclusao ? new Date(demanda.data_conclusao).toLocaleDateString('pt-BR') : '-'}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${demanda.status}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                <button data-id="${demanda.ID}" class="edit-demand-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
-                <button data-id="${demanda.ID}" class="delete-demand-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
-            </td>
-        `;
-        list.appendChild(row);
-    });
-
-    // Adiciona listeners de evento para os botões de edição/exclusão
-    document.querySelectorAll('.edit-demand-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            handleDemandAction('edit', e.target.dataset.id);
-        });
-    });
-    document.querySelectorAll('.delete-demand-btn').forEach(button => {
-        button.addEventListener('click', (e) => {
-            handleDemandAction('delete', e.target.dataset.id);
-        });
-    });
-}
-
-// Função para renderizar Contatos com filtros aplicados (recebe o array filtrado)
-function renderContatos(dataToRender = contatosCache) {
-    const list = document.getElementById('contatosList');
-    list.innerHTML = ''; // Limpa a lista atual
-
-    if (dataToRender.length === 0) {
-        list.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum contato encontrado.</td></tr>';
-        return;
-    }
-
-    // O cache original (ou filtrado) já está ordenado pelo mais novo (no carregarContatos)
-    dataToRender.forEach((contato, index) => {
-        const row = document.createElement('tr');
-        row.className = 'hover:bg-gray-50 dark:hover:bg-gray-700 transition duration-150 ease-in-out';
-        row.innerHTML = `
-            <!-- ID Sequencial (índice no array filtrado ou original) -->
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.nome}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.telefone || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.regiao || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${contato.endereco || '-'}</td>
-            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
-                <button data-id="${contato.ID}" class="edit-contact-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
-                <button data-id="${contato.ID}" class="delete-contact-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
-            </td>
-        `;
-        list.appendChild(row);
-    });
-
-    // Adiciona listeners de evento para os botões de edição/exclusão
-    document.querySelectorAll('.edit-contact-btn').forEach(button => {
-        button.addEventListener('click', (e) => openEditContactModal(e.target.dataset.id));
-    });
-    document.querySelectorAll('.delete-contact-btn').forEach(button => {
-        button.addEventListener('click', (e) => deleteContact(e.target.dataset.id));
-    });
-}
-
-
-// --- EVENT LISTENERS PARA FILTROS ---
-
-// Filtro de texto para Contato (Demandas) com debounce
-const debouncedFilterDemandasContato = debounce(() => {
-    demandasFilters.contato = document.getElementById('filterDemandasContato').value.toLowerCase();
-    applyDemandasFilter();
-}, 300); // 300ms de delay
-
-document.getElementById('filterDemandasContato').addEventListener('input', debouncedFilterDemandasContato);
-
-// Filtro de seleção para Status (Demandas)
-document.getElementById('filterDemandasStatus').addEventListener('change', (e) => {
-    demandasFilters.status = e.target.value;
-    applyDemandasFilter();
-});
-
-// Botão Limpar Filtros Demandas
-document.getElementById('clearDemandasFilter').addEventListener('click', () => {
-    document.getElementById('filterDemandasContato').value = '';
-    document.getElementById('filterDemandasStatus').value = '';
-    demandasFilters.contato = '';
-    demandasFilters.status = '';
-    applyDemandasFilter(); // Re-renderiza sem filtros
-});
-
-// Event listener for sort dropdown
-
-
-
-// Filtro de texto para Nome (Contatos) com debounce
-const debouncedFilterContatosNome = debounce(() => {
-    contatosFilters.nome = document.getElementById('filterContatosNome').value.toLowerCase();
-    applyContatosFilter();
-}, 300); // 300ms de delay
-
-document.getElementById('filterContatosNome').addEventListener('input', debouncedFilterContatosNome);
-
-// Filtro de seleção para Região (Contatos)
-document.getElementById('filterContatosRegiao').addEventListener('change', (e) => {
-    contatosFilters.regiao = e.target.value;
-    applyContatosFilter();
-});
-
-// Botão Limpar Filtros Contatos
-document.getElementById('clearContatosFilter').addEventListener('click', () => {
-    document.getElementById('filterContatosNome').value = '';
-    document.getElementById('filterContatosRegiao').value = '';
-    contatosFilters.nome = '';
-    contatosFilters.regiao = '';
-    applyContatosFilter(); // Re-renderiza sem filtros
-});
-
-// --- ATUALIZAR FUNÇÕES DE CARREGAMENTO ---
-
-// ATUALIZAR carregarDemandas
-async function carregarDemandas() {
-    if (!isAuthenticated) return;
-    // Sorting is now handled by applyDemandasFilter after fetching
-    const { data, error } = await supabase
-        .from('Demandas Ativas')
-        .select('*');
-
-    if (error) {
-        console.error("Erro ao carregar demandas:", error);
-        showModal("Erro de Conexão", "Não foi possível carregar as demandas. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)");
-    } else {
-        demandasCache = data;
-        // Update UI elements that depend on the full, unfiltered cache
-        updateDashboardMetrics();
-        updateDemandasStatusFilterOptions();
-        loadRegiaoOptions(); // This is for the contact form, but let's keep it here
-        
-        // Apply current filters and sort order, then render the table
-        applyDemandasFilter(); 
-        
-        // Update sort icons after filters are applied and table is potentially rendered
-        updateSortIcons();
-    }
-}
-
-// ATUALIZAR carregarContatos
-async function carregarContatos() {
-    if (!isAuthenticated) return;
-    const { data, error } = await supabase
-        .from('Contatos')
-        .select('ID, nome, telefone, regiao, endereco, user_id')
-        .order('ID', { ascending: false });
-    if (error) {
-        console.error("Erro ao carregar contatos:", error);
-        showModal("Erro de Conexão", "Não foi possível carregar os contatos. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)");
-    } else {
-        contatosCache = data;
-        renderContatos(); // Renderiza com dados frescos
-        updateDashboardMetrics(); // Atualiza dashboard
-        updateContatosRegiaoFilterOptions(); // Atualiza opções de filtro
-        applyContatosFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
-        console.log("Contatos carregados:", contatosCache);
-
-    }
-}
-
-
-        function populateContactSelect() {
-    const select = document.getElementById('demandContactNameSelect');
-    select.innerHTML = '<option value="">Selecione um contato</option>';
-
-    contatosCache.forEach(contato => {
-        const option = document.createElement('option');
-        option.value = contato.nome; // ou contato.ID se quiser usar ID
-        option.textContent = contato.nome;
-        select.appendChild(option);
-    });
-}
-
-        // A nova função loadDemandasOptions() que você precisa para carregar os dados.
-async function loadDemandasOptions() {
-    if (!isAuthenticated) return;
-    const selectElement = document.getElementById('demandTitleSelect');
-    selectElement.innerHTML = '<option value="">Carregando opções...</option>'; // Placeholder temporário
-
-    // Busca o ID e o título da Demanda da tabela 'Demandas'
-    const { data, error } = await supabase
-        .from('Demandas')
-        .select('Demanda');
-
-    if (error) {
-        console.error("Erro ao carregar opções de Demandas:", error);
-        selectElement.innerHTML = '<option value="">Erro ao carregar</option>';
-        return;
-    }
-
-    if (!data || data.length === 0) {
-        selectElement.innerHTML = '<option value="">Nenhuma demanda encontrada</option>';
-        return;
-    }
-
-    // Limpa o seletor e adiciona a opção de placeholder
-    selectElement.innerHTML = '<option value="">Selecione a Demanda</option>';
-
-    // Percorre todos os itens retornados, sem remover duplicatas
-    data.forEach(demanda => {
-        const trimmedDemanda = demanda.Demanda.trim(); // Trim here
-        const option = document.createElement('option');
-        option.value = trimmedDemanda; // Use trimmed value
-        option.textContent = trimmedDemanda; // Use trimmed value
-        selectElement.appendChild(option);
-        // Adiciona ao cache de opções para o componente customizado
-        if (!allDemandOptions.includes(trimmedDemanda)) { // Use trimmed value
-            allDemandOptions.push(trimmedDemanda);
-        }
-    });
-}
-
-// ...
-// Outras funções e event listeners
-// ...
-
-// Atualizado: O event listener para o botão de 'Nova Demanda' agora chama a nova função.
-document.getElementById('addDemandButton').addEventListener('click', () => {
-    resetDemandForm();
-    populateContactSelect(); // Garante que os contatos estão no select
-    loadDemandasOptions();
-    demandModal.classList.remove('hidden');
-});
-        async function loadRegiaoOptions() {
-            if (!isAuthenticated) return;
-            const selectElement = document.getElementById('contactRegion');
-            selectElement.innerHTML = '<option value="">Carregando opções...</option>'; // Placeholder temporário
-
-            // Busca todas as demandas para extrair os valores únicos
-            const { data, error } = await supabase
-                .from('Regioes')
-                .select('regiao');
-
-            selectElement.innerHTML = ''; // Limpa antes de popular
-
-            if (error) {
-                console.error("Erro ao carregar opções de Região (Regiões):", error);
-                selectElement.innerHTML = '<option value="">Erro ao carregar</option>';
-                return;
-            }
-
-            if (!data || data.length === 0) {
-                selectElement.innerHTML = '<option value="">Nenhuma região ativa</option>';
-                return;
-            }
-
-            // 1. Extrair os valores da coluna 'regiao' e garantir que não são nulos
-            const allRegiaos = data.map(item => item.regiao).filter(Boolean);
-
-            // 2. Obter valores únicos
-            const uniqueRegiaos = [...new Set(allRegiaos)];
-
-            // 3. Adicionar uma opção de placeholder e as opções únicas
-            selectElement.innerHTML = '<option value="">Selecione a Região</option>';
-
-            uniqueRegiaos.sort().forEach(regiao => {
-                const option = document.createElement('option');
-                option.value = regiao;
-                option.textContent = regiao;
-                selectElement.appendChild(option);
-            });
-        }
-
-
-        function deleteContact(id) {
-            const contato = contatosCache.find(c => String(c.ID) === id);
-            const nomeContato = contato ? `o contato "${contato.nome}"` : `o item #${id}`;
-
-            openConfirmationModal(nomeContato, async () => {
-                const { error } = await supabase
-                    .from('Contatos')
-                    .delete()
-                    .eq('ID', id);
-
-                if (error) {
-                    console.error("Erro ao excluir contato:", error);
-                    showModal("Erro", `Erro ao excluir contato: ${error.message}`);
-                } else {
-                    await carregarContatos();
-                    showModal("Sucesso", "Contato excluído com sucesso!");
-                }
-            });
-        }
-
-        // Nova função para gerenciar o modal de confirmação
-        function openConfirmationModal(itemName, onConfirmCallback) {
-            const modal = document.getElementById('confirmDeleteModal');
-            const messageElement = document.getElementById('confirmDeleteMessage');
-            const confirmButton = document.getElementById('confirmDeleteButton');
-            const cancelButton = document.getElementById('cancelDeleteButton');
-
-            messageElement.textContent = `Você tem certeza que deseja excluir ${itemName}? Esta ação não pode ser desfeita.`;
-
-            // Limpa listeners antigos e define os novos
-            const newConfirmButton = confirmButton.cloneNode(true);
-            confirmButton.parentNode.replaceChild(newConfirmButton, confirmButton);
-
-            newConfirmButton.addEventListener('click', () => {
-                onConfirmCallback();
-                modal.classList.add('hidden');
-            });
-            cancelButton.onclick = () => modal.classList.add('hidden');
-
-            modal.classList.remove('hidden');
-        }
-
-
-        // =========================================================================================
-        // EVENT LISTENERS E INICIALIZAÇÃO
-        // =========================================================================================
-
-        // === Lógica de Login ===
-// === Lógica de Login (Real com Supabase Auth) ===
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
-            const loginMessage = document.getElementById('loginMessage');
-
-            // Limpa mensagens anteriores
-            loginMessage.classList.add('hidden');
-            loginMessage.textContent = '';
-            
-            // Chamar o método signInWithPassword do Supabase
-            const { data, error } = await supabase.auth.signInWithPassword({
-                email: email,
-                password: password,
-            });
-
-            if (error) {
-                // Exibe erro de login
-                console.error('Erro de Login:', error.message);
-                loginMessage.textContent = `Falha no login: ${error.message}`;
-                loginMessage.classList.remove('hidden');
-
-            } else if (data.session && data.user) {
-                // Lógica de sucesso (mantida do seu código original)
-                isAuthenticated = true;
-                // NOVO: Salva o estado de autenticação no localStorage
-                sessionStorage.setItem('isAuthenticated', 'true');
-                sessionStorage.setItem('userEmail', data.user.email); // Opcional: para reutilizar o nome/email
-
-                document.getElementById('loginScreen').style.display = 'none';
-                document.getElementById('mainApp').style.display = 'flex';
-                document.getElementById('userName').textContent = data.user.email; // Melhor usar o email retornado
-                // Tenta carregar os dados reais após o login
-                initializeCharts();
-                await carregarContatos();
-                await carregarDemandas();
-            } else {
-                 // Caso de erro inesperado
-                 loginMessage.textContent = 'Erro desconhecido. Verifique suas credenciais e confirme seu e-mail.';
-                 loginMessage.classList.remove('hidden');
-            }
-        });
-// ...
-
-                document.getElementById('logoutButton').addEventListener('click', () => {
-            isAuthenticated = false;
-            // NOVO: Remove o estado de autenticação do localStorage
-            sessionStorage.removeItem('isAuthenticated');
-            sessionStorage.removeItem('userEmail'); // Opcional: remove também o email
-
-            demandasCache = [];
-            contatosCache = [];
-            document.getElementById('loginForm').reset(); // <-- Limpa os campos de email e senha
-            document.getElementById('loginScreen').style.display = 'flex';
-            document.getElementById('mainApp').style.display = 'none';
-        });
-
-
-        // === Lógica de Dark Mode ===
-        document.getElementById('toggleDarkMode').addEventListener('click', () => {
-            toggleDarkMode(!document.documentElement.classList.contains('dark'));
-            // Re-inicializa o gráfico para atualizar as cores do texto
-            initializeCharts();
-            updateDashboardMetrics();
-        });
-
-        document.getElementById('toggleDarkModeLogin').addEventListener('click', (e) => {
-            e.preventDefault();
-            toggleDarkMode(!document.documentElement.classList.contains('dark'));
-        });
-
-        document.getElementById('darkModeToggleSetting').addEventListener('change', (e) => {
-            toggleDarkMode(e.target.checked);
-            // Re-inicializa o gráfico para atualizar as cores do texto
-            initializeCharts();
-            updateDashboardMetrics();
-        });
-
-
-        // === Lógica de Tabs ===
-        document.querySelectorAll('.tab-link').forEach(link => {
-            link.addEventListener('click', (e) => {
-                e.preventDefault();
-                const tabName = e.target.closest('.tab-link').dataset.tab;
-
-                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-                document.getElementById(tabName).classList.add('active');
-
-                document.querySelectorAll('.tab-link').forEach(l => {
-                    l.classList.remove('active-tab', 'bg-indigo-50', 'dark:bg-indigo-500/10', 'text-indigo-700', 'dark:text-indigo-300');
-                    l.classList.add('text-gray-600', 'dark:text-gray-300', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                });
-
-                const activeLinks = document.querySelectorAll(`.tab-link[data-tab="${tabName}"]`);
-                activeLinks.forEach(activeLink => {
-                    activeLink.classList.add('active-tab', 'bg-indigo-50', 'dark:bg-indigo-500/10', 'text-indigo-700', 'dark:text-indigo-300');
-                    activeLink.classList.remove('text-gray-600', 'dark:text-gray-300', 'hover:bg-gray-100', 'dark:hover:bg-gray-700');
-                });
-
-                const pageTitleText = document.querySelector(`.tab-link[data-tab="${tabName}"]`).textContent.trim();
-                document.getElementById('pageTitle').textContent = pageTitleText;
-
-                if (tabName === 'dashboard') {
-                    // O gráfico já é atualizado ao carregar os dados, mas podemos forçar se necessário
-                    if (statusChart) {
-                        statusChart.resize();
-                    } else {
-                        initializeCharts();
-                        updateDashboardMetrics();
-                    }
-                }
-            });
-        });
-
-        // === Lógica do Componente Customizado de Multiseleção de Demandas ===
-        const customSelect = document.getElementById('customDemandSelect');
-        const searchInput = document.getElementById('demandSearchInput');
-        const tagsContainer = document.getElementById('demandTagsContainer');
-        const optionsDropdown = document.getElementById('demandOptionsDropdown');
-        const originalSelect = document.getElementById('demandTitleSelect');
-
-        let allDemandOptions = []; // Cache para todas as opções de demanda
-
-        // Função para adicionar uma tag e atualizar o select original
-        function addDemandTag(value) {
-            if (!value) return;
-            const trimmedValue = value.trim(); // Trim the value
-
-            // Verifica se a tag já existe
-            const existingTags = Array.from(tagsContainer.querySelectorAll('.demand-tag')).map(tag => tag.dataset.value);
-            if (existingTags.includes(trimmedValue)) { // Use trimmedValue here
-                return; // Não adiciona duplicatas
-            }
-
-            // Cria a tag visual
-            const tag = document.createElement('div');
-            tag.className = 'demand-tag flex items-center bg-indigo-100 dark:bg-indigo-500/30 text-indigo-700 dark:text-indigo-200 text-sm font-medium px-2 py-1 rounded-md';
-            tag.dataset.value = trimmedValue; // Use trimmedValue here
-            tag.innerHTML = `
-                <span>${trimmedValue}</span>
-                <button type="button" class="ml-2 text-indigo-500 dark:text-indigo-300 hover:text-indigo-700 dark:hover:text-indigo-100">&times;</button>
-            `;
-            tagsContainer.appendChild(tag);
-
-            // Adiciona evento para remover a tag
-            tag.querySelector('button').addEventListener('click', () => {
-                removeDemandTag(trimmedValue); // Use trimmedValue here
-            });
-
-            // Atualiza o select original
-            const option = Array.from(originalSelect.options).find(opt => opt.value === trimmedValue); // Use trimmedValue here
-            if (option) {
-                option.selected = true;
-            }
-
-            // Atualiza o dropdown de opções
-            renderDemandOptionsDropdown();
-        }
-
-        // Função para remover uma tag
-        function removeDemandTag(value) {
-            // Remove a tag visual
-            const tagToRemove = tagsContainer.querySelector(`[data-value="${value}"]`);
-            if (tagToRemove) {
-                tagToRemove.remove();
-            }
-
-            // Desmarca no select original
-            const option = Array.from(originalSelect.options).find(opt => opt.value === value);
-            if (option) {
-                option.selected = false;
-            }
-            
-            // Atualiza o dropdown de opções
-            renderDemandOptionsDropdown();
-        }
-
-        // Função para renderizar o dropdown de opções
-        function renderDemandOptionsDropdown() {
-            const filterText = searchInput.value.toLowerCase();
-            const selectedValues = Array.from(originalSelect.selectedOptions).map(opt => opt.value);
-
-            optionsDropdown.innerHTML = '';
-            const availableOptions = allDemandOptions
-                .filter(opt => !selectedValues.includes(opt)) // Filtra já selecionados
-                .filter(opt => opt.toLowerCase().includes(filterText)); // Filtra por busca
-
-            if (availableOptions.length === 0) {
-                optionsDropdown.innerHTML = `<div class="px-4 py-2 text-sm text-gray-500">Nenhuma opção encontrada.</div>`;
-            } else {
-                availableOptions.forEach(optionValue => {
-                    const optionDiv = document.createElement('div');
-                    optionDiv.className = 'px-4 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 text-sm';
-                    optionDiv.textContent = optionValue;
-                    optionDiv.addEventListener('click', () => {
-                        addDemandTag(optionValue);
-                        searchInput.value = '';
-                        renderDemandOptionsDropdown();
-                        optionsDropdown.classList.add('hidden');
-                    });
-                    optionsDropdown.appendChild(optionDiv);
-                });
-            }
-        }
-
-        // Eventos para abrir/fechar e filtrar o dropdown
-        searchInput.addEventListener('focus', () => {
-            renderDemandOptionsDropdown();
-            optionsDropdown.classList.remove('hidden');
-        });
-        searchInput.addEventListener('input', renderDemandOptionsDropdown);
-        document.addEventListener('click', (e) => {
-            if (!customSelect.contains(e.target)) {
-                optionsDropdown.classList.add('hidden');
-            }
-        });
-
-        // === Lógica do Modal de Demandas ===
-
-        const demandModal = document.getElementById('demandModal');
-        const demandForm = document.getElementById('demandForm');
-        const demandModalTitle = document.getElementById('demandModalTitle');
-        const demandIdToUpdateInput = document.getElementById('demandIdToUpdateInput');
-
-        function resetDemandForm() {
-            demandForm.reset();
-            demandModalTitle.textContent = "Adicionar Nova Demanda";
-            demandIdToUpdateInput.value = "";
-            // Limpa as tags do componente customizado
-            tagsContainer.innerHTML = '';
-            // Define a data de registro para hoje ao criar uma nova demanda
-            const today = new Date().toISOString().split('T')[0];
-            document.getElementById('demandStartDate').value = today;
-            document.getElementById('demandEndDate').value = ''; // Limpa a data de conclusão
-            Array.from(originalSelect.options).forEach(opt => opt.selected = false);
-        }
-
-        document.getElementById('addDemandButton').addEventListener('click', () => {
-            resetDemandForm();
-            demandModal.classList.remove('hidden');
-        });
-
-        document.getElementById('closeDemandModalButton').addEventListener('click', () => demandModal.classList.add('hidden'));
-
-        demandForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const demandId = demandIdToUpdateInput.value;
-            const demanda = Array.from(document.getElementById('demandTitleSelect').selectedOptions).map(option => option.value);
-            const contato = document.getElementById('demandContactNameSelect').value;
-            const descricao = document.getElementById('demandDescription').value;
-            const data_registro = document.getElementById('demandStartDate').value;
-            const data_conclusao = document.getElementById('demandEndDate').value || null; // Envia nulo se vazio
-            const status = document.getElementById('demandStatus').value;
-
-            let error = null;
-            let message = '';
-
-            // Validação para garantir que pelo menos uma demanda foi selecionada
-            if (demanda.length === 0) {
-                showModal("Atenção", "Por favor, selecione pelo menos uma demanda.");
-                return;
-            }
-
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                showModal("Erro", "Você não está autenticado.");
-                return;
-            }
-
-            const dataToSave = { demanda, contato, descricao, status, data_registro, data_conclusao, user_id: user.id };
-
-            if (demandId) {
-                // Atualizar
-                const { error: updateError } = await supabase.from('Demandas Ativas').update(dataToSave).eq('ID', demandId);
-                error = updateError;
-                message = "Demanda atualizada com sucesso!";
-            } else {
-                // Inserir
-                const { error: insertError } = await supabase.from('Demandas Ativas').insert([dataToSave]);
-                error = insertError;
-                message = "Demanda adicionada com sucesso!";
-            }
-
-            if (error) {
-                console.error("Erro ao processar demanda:", error);
-                showModal("Erro", `Erro ao processar demanda: ${error.message}`);
-            } else {
-                demandModal.classList.add('hidden');
-                resetDemandForm();
-                await carregarDemandas();
-                showModal("Sucesso", message);
-            }
-        });
-
-        // === Lógica de Importação/Exportação ===
-        document.getElementById('exportContatosCSV').addEventListener('click', () => {
-            exportToCSV(contatosCache, 'contatos.csv');
-        });
-
-        document.getElementById('importContatosCSV').addEventListener('click', () => {
-            document.getElementById('contatosCsvInput').click();
-        });
-
-        document.getElementById('contatosCsvInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            handleCsvImport(file, 'Contatos', ['nome'], carregarContatos);
-            e.target.value = null; // Reseta o input para permitir selecionar o mesmo arquivo novamente
-        });
-
-        document.getElementById('exportDemandasCSV').addEventListener('click', () => {
-            exportToCSV(demandasCache, 'demandas.csv');
-        });
-
-        document.getElementById('importDemandasCSV').addEventListener('click', () => {
-            document.getElementById('demandasCsvInput').click();
-        });
-
-        document.getElementById('demandasCsvInput').addEventListener('change', (e) => {
-            const file = e.target.files[0];
-            handleCsvImport(file, 'Demandas Ativas', ['demanda', 'contato', 'status'], carregarDemandas);
-            e.target.value = null; // Reseta o input
-        });
-
-        // === Lógica do Modal de Contatos ===
-
-        const contactModal = document.getElementById('contactModal');
-        const contactForm = document.getElementById('contactForm');
-        const contactModalTitle = document.getElementById('contactModalTitle');
-        const contactIdToUpdateInput = document.getElementById('contactIdToUpdateInput');
-
-        function resetContactForm() {
-            contactForm.reset();
-            contactModalTitle.textContent = "Adicionar Novo Contato";
-            contactIdToUpdateInput.value = "";
-        }
-
-        document.getElementById('addContactButton').addEventListener('click', () => { resetContactForm(); contactModal.classList.remove('hidden'); });
-
-        document.getElementById('closeContactModalButton').addEventListener('click', () => {
-            contactModal.classList.add('hidden');
-        });
-
-        function openEditContactModal(id) {
-            const contato = contatosCache.find(c => String(c.ID) === id);
-            if (contato) {
-                contactModalTitle.textContent = `Editar Contato #${id}`;
-                contactIdToUpdateInput.value = id;
-                document.getElementById('contactName').value = contato.nome;
-                document.getElementById('contactPhone').value = contato.telefone || '';
-                // O valor deve ser definido diretamente no elemento SELECT
-                document.getElementById('contactRegion').value = contato.regiao || '';
-                document.getElementById('contactAddress').value = contato.endereco || '';
-                // email e tipo não são exibidos no modal
-                contactModal.classList.remove('hidden');
-            } else {
-                showModal("Erro", "Contato não encontrado.");
-            }
-        }
-
-        contactForm.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const contactId = contactIdToUpdateInput.value;
-            const nome = document.getElementById('contactName').value;
-            const telefone = document.getElementById('contactPhone').value;
-            const regiao = document.getElementById('contactRegion').value;
-            const endereco = document.getElementById('contactAddress').value;
-
-            let error = null;
-            let message = '';
-
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                showModal("Erro", "Você não está autenticado.");
-                return;
-            }
-
-            const dataToSave = { nome, telefone, regiao, endereco, user_id: user.id };
-
-            if (contactId) {
-                // Atualizar
-                const { error: updateError } = await supabase
-                    .from('Contatos')
-                    .update(dataToSave)
-                    .eq('ID', contactId);
-                error = updateError;
-                message = "Contato atualizado com sucesso!";
-            } else {
-                // Inserir
-                const { error: insertError } = await supabase
-                    .from('Contatos')
-                    .insert([dataToSave]);
-                error = insertError;
-                message = "Contato adicionado com sucesso!";
-            }
-
-            if (error) {
-                console.error("Erro ao processar contato:", error);
-                showModal("Erro", `Erro ao processar contato: ${error.message}`);
-            } else {
-                contactModal.classList.add('hidden');
-                resetContactForm();
-                await carregarContatos();
-                showModal("Sucesso", message);
-            }
-        });
-        //Formatação de exibição de telefone no cadastro de contatos
-        //
-const contactPhone = document.getElementById('contactPhone');
-
-contactPhone.addEventListener('input', function (e) {
-    let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não for número
-
-    if (value.length > 11) value = value.slice(0, 11);
-
-    if (value.length > 0) {
-        value = value.replace(/^(\d{2})(\d)/g, '($1) $2');
-    }
-    if (value.length > 9) {
-        value = value.replace(/(\d{5})(\d{4})$/, '$1-$2');
-    } else if (value.length > 5) {
-        value = value.replace(/(\d{4,5})(\d{0,4})$/, '$1-$2');
-    }
-
-    e.target.value = value;
-});
-        function updateSortIcons() {
-            document.querySelectorAll('#demandas th[data-sort]').forEach(header => {
-                const iconSpan = header.querySelector('.sort-icon');
-                if (header.dataset.sort === sortColumn) {
-                    if (sortDirection === 'asc') {
-                        iconSpan.innerHTML = ' &#9650;'; // up arrow
-                    } else {
-                        iconSpan.innerHTML = ' &#9660;'; // down arrow
-                    }
-                } else {
-                    iconSpan.innerHTML = '';
-                }
-            });
-        }
-
-        document.querySelectorAll('#demandas th[data-sort]').forEach(header => {
-            header.addEventListener('click', () => {
-                const newSortColumn = header.dataset.sort;
-                if (sortColumn === newSortColumn) {
-                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-                } else {
-                    sortColumn = newSortColumn;
-                    sortDirection = 'desc';
-                }
-                // Re-apply filters and sorting without a new network request
-                applyDemandasFilter();
-                // Update the sort indicator icons
-                updateSortIcons();
-            });
-        });
-        function initDoubleScrollbar(wrapperId) {
-            const wrapper = document.getElementById(wrapperId);
-            if (!wrapper) return;
-
-            const bottomScrollbar = wrapper.querySelector('.bottom-scrollbar-wrapper');
-            const table = wrapper.querySelector('table');
-            if (!bottomScrollbar || !table) return;
-
-            const topScrollbarWrapper = document.createElement('div');
-            topScrollbarWrapper.style.overflowX = 'auto';
-            topScrollbarWrapper.style.overflowY = 'hidden';
-            topScrollbarWrapper.classList.add('top-scrollbar-wrapper');
-
-            const topScrollbarInner = document.createElement('div');
-            topScrollbarInner.style.height = '1px';
-
-            topScrollbarWrapper.appendChild(topScrollbarInner);
-            wrapper.prepend(topScrollbarWrapper);
-
-            function updateWidth() {
-                topScrollbarInner.style.width = table.scrollWidth + 'px';
-            }
-
-            updateWidth();
-
-            topScrollbarWrapper.addEventListener('scroll', () => {
-                bottomScrollbar.scrollLeft = topScrollbarWrapper.scrollLeft;
-            });
-
-            bottomScrollbar.addEventListener('scroll', () => {
-                topScrollbarWrapper.scrollLeft = bottomScrollbar.scrollLeft;
-            });
-
-            window.addEventListener('resize', updateWidth);
-
-            const observer = new MutationObserver(updateWidth);
-            observer.observe(table, { childList: true, subtree: true });
-        }
-
-        initDoubleScrollbar('demandas-table-wrapper');
-        initDoubleScrollbar('contatos-table-wrapper');
-    }
-
-</script>
-<nav id="bottom-nav" class="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 shadow-2xl z-40">
-    <div class="flex h-full justify-around items-center">
-        <a href="#" class="tab-link flex flex-col items-center justify-center h-full w-full text-indigo-600 dark:text-indigo-400 active-tab-mobile" data-tab="dashboard">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 00-1-1H9a1 1 0 00-1 1v4a1 1 0 001 1z"></path></svg>
-            <span class="text-xs mt-1">Dash</span>
-        </a>
-        <a href="#" class="tab-link flex flex-col items-center justify-center h-full w-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" data-tab="demandas">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
-            <span class="text-xs mt-1">Demandas</span>
-        </a>
-        <a href="#" class="tab-link flex flex-col items-center justify-center h-full w-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" data-tab="contatos">
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20v-2a3 3 0 015.356-1.857M7 20h4.444M12 12h.01M17 12h.01M10 5.257V4a1 1 0 011-1h2a1 1 0 011 1v1.257m-4 12V16a1 1 0 011-1h6a1 1 0 011 1v1.257m-8 3H9a1 1 0 00-1 1v1h8v-1a1 1 0 00-1-1h-2"></path></svg>
-            <span class="text-xs mt-1">Contatos</span>
-        </a>
-        <a href="#" class="tab-link flex flex-col items-center justify-center h-full w-full text-gray-500 dark:text-gray-400 hover:text-indigo-600 dark:hover:text-indigo-400" data-tab="configuracoes">
-             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-            <span class="text-xs mt-1">Config.</span>
-        </a>
-    </div>
-</nav>
-</body>
+        </nav>
+    </body>
 </html>
