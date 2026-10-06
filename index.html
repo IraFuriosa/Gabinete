@@ -226,6 +226,13 @@
                                     <li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Carregando...</li>
                                 </ul>
                             </div>
+                            <!-- Próximas Ações (follow-ups) -->
+                            <div class="bg-white dark:bg-gray-800 p-6 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700">
+                                <h3 class="text-xl font-semibold mb-4 text-indigo-600 dark:text-indigo-400">Próximas Ações</h3>
+                                <ul id="proximasAcoesList" class="space-y-3">
+                                    <li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Nenhuma ação agendada.</li>
+                                </ul>
+                            </div>
                         </div>
                     </div>
 
@@ -324,6 +331,14 @@
                                             <input
                                                 type="date"
                                                 id="demandEndDate"
+                                                class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                            />
+                                        </div>
+                                        <div>
+                                            <label for="demandFollowUpDate" class="block text-sm font-medium mb-1">Data de Seguimento</label>
+                                            <input
+                                                type="date"
+                                                id="demandFollowUpDate"
                                                 class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
                                             />
                                         </div>

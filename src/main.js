@@ -228,6 +228,7 @@ window.onload = function () {
                 document.getElementById('demandDescription').value = demanda.descricao;
                 document.getElementById('demandStartDate').value = demanda.data_registro || '';
                 document.getElementById('demandEndDate').value = demanda.data_conclusao || '';
+                document.getElementById('demandFollowUpDate').value = demanda.data_seguimento || '';
                 document.getElementById('demandStatus').value = demanda.status;
 
                 document.getElementById('demandModal').classList.remove('hidden');
@@ -390,6 +391,33 @@ window.onload = function () {
                             <span class="text-xs font-bold text-indigo-600 dark:text-indigo-400">${escapeHtml(demanda.status)}</span>
                         `;
                     topList.appendChild(li);
+                });
+            }
+        }
+
+        // --- Próximas Ações (follow-ups) no dashboard ---
+        const proximasAcoesList = document.getElementById('proximasAcoesList');
+        if (proximasAcoesList) {
+            proximasAcoesList.innerHTML = '';
+            const acoes = demandasCache
+                .filter((d) => d.data_seguimento && d.status !== 'Concluída' && d.status !== 'Cancelada')
+                .sort((a, b) => new Date(a.data_seguimento) - new Date(b.data_seguimento));
+
+            if (acoes.length === 0) {
+                proximasAcoesList.innerHTML = '<li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Nenhuma ação agendada.</li>';
+            } else {
+                const hoje = new Date();
+                hoje.setHours(0, 0, 0, 0);
+                acoes.slice(0, 5).forEach((demanda) => {
+                    const followUp = new Date(demanda.data_seguimento);
+                    const atrasada = followUp < hoje;
+                    const li = document.createElement('li');
+                    li.className = `p-3 rounded-lg text-sm font-medium flex justify-between items-center ${atrasada ? 'bg-red-50 dark:bg-red-900/30' : 'bg-gray-50 dark:bg-gray-700'}`;
+                    li.innerHTML = `
+                    <span>${escapeHtml(formatDemandaDisplay(demanda.demanda))} (${escapeHtml(demanda.contato)})</span>
+                    <span class="text-xs font-bold ${atrasada ? 'text-red-600 dark:text-red-400' : 'text-indigo-600 dark:text-indigo-400'}">${atrasada ? 'Atrasada · ' : ''}${followUp.toLocaleDateString('pt-BR')}</span>
+                `;
+                    proximasAcoesList.appendChild(li);
                 });
             }
         }
@@ -1091,6 +1119,7 @@ window.onload = function () {
         const today = new Date().toISOString().split('T')[0];
         document.getElementById('demandStartDate').value = today;
         document.getElementById('demandEndDate').value = ''; // Limpa a data de conclusão
+        document.getElementById('demandFollowUpDate').value = ''; // Limpa a data de seguimento
         Array.from(originalSelect.options).forEach((opt) => (opt.selected = false));
     }
 
@@ -1125,6 +1154,7 @@ window.onload = function () {
         const data_registro = document.getElementById('demandStartDate').value;
         const data_conclusao = document.getElementById('demandEndDate').value || null; // Envia nulo se vazio
         const status = document.getElementById('demandStatus').value;
+        const data_seguimento = document.getElementById('demandFollowUpDate').value || null;
 
         let error;
         let message;
@@ -1143,7 +1173,7 @@ window.onload = function () {
             return;
         }
 
-        const dataToSave = { demanda, contato, descricao, status, data_registro, data_conclusao, user_id: user.id };
+        const dataToSave = { demanda, contato, descricao, status, data_registro, data_conclusao, data_seguimento, user_id: user.id };
 
         if (demandId) {
             // Atualizar
