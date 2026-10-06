@@ -590,7 +590,7 @@ window.onload = function () {
         list.innerHTML = ''; // Limpa a lista atual
 
         if (dataToRender.length === 0) {
-            list.innerHTML = '<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">Nenhum contato encontrado.</td></tr>';
+            list.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Nenhum contato encontrado.</td></tr>';
             return;
         }
 
@@ -605,6 +605,8 @@ window.onload = function () {
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${escapeHtml(contato.telefone || '-')}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${escapeHtml(contato.regiao || '-')}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${escapeHtml(contato.endereco || '-')}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${escapeHtml(contato.cpf || '-')}</td>
+            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-gray-300">${escapeHtml(contato.cartao_sus || '-')}</td>
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                 <button data-id="${escapeHtml(contato.ID)}" class="edit-contact-btn text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-600 transition">Editar</button>
                 <button data-id="${escapeHtml(contato.ID)}" class="delete-contact-btn text-red-600 hover:text-red-900 dark:text-red-400 dark:hover:text-red-600 transition">Excluir</button>
@@ -701,6 +703,7 @@ window.onload = function () {
     // ATUALIZAR carregarContatos
     async function carregarContatos() {
         if (!isAuthenticated) return;
+        document.getElementById('contatosList').innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando contatos…</td></tr>';
         const { data, error } = await supabase
             .from('Contatos')
             .select('ID, nome, telefone, regiao, endereco, user_id, cartao_sus, cpf')
