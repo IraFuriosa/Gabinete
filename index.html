@@ -531,6 +531,28 @@
                                         />
                                     </div>
 
+                                    <div>
+                                        <label for="contactCpf" class="block text-sm font-medium mb-1">CPF</label>
+                                        <input
+                                            type="text"
+                                            id="contactCpf"
+                                            maxlength="14"
+                                            placeholder="000.000.000-00"
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label for="contactCartaoSus" class="block text-sm font-medium mb-1">Cartão SUS</label>
+                                        <input
+                                            type="text"
+                                            id="contactCartaoSus"
+                                            maxlength="18"
+                                            placeholder="000 0000 0000 0000"
+                                            class="w-full px-4 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-gray-50 dark:bg-gray-700/50 dark:text-white transition"
+                                        />
+                                    </div>
+
                                     <div class="flex justify-end space-x-3 pt-2">
                                         <button
                                             type="button"
@@ -642,6 +664,26 @@
                                         class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 dark:peer-focus:ring-indigo-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-indigo-600"
                                     ></div>
                                 </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modal de Detalhes do Contato -->
+                    <div
+                        id="contactDetailsModal"
+                        class="fixed inset-0 bg-gray-900 bg-opacity-50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden"
+                    >
+                        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 w-full max-w-sm p-6 space-y-4">
+                            <h3 class="text-xl font-bold text-indigo-600 dark:text-indigo-400">Dados do Contato</h3>
+                            <dl id="contactDetailsContent" class="space-y-2 text-sm"></dl>
+                            <div class="flex justify-end">
+                                <button
+                                    id="closeContactDetailsModalButton"
+                                    type="button"
+                                    class="py-2 px-4 rounded-lg text-white bg-indigo-600 hover:bg-indigo-700 transition font-semibold text-sm"
+                                >
+                                    Fechar
+                                </button>
                             </div>
                         </div>
                     </div>

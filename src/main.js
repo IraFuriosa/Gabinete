@@ -549,7 +549,7 @@ window.onload = function () {
             row.innerHTML = `
             <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">${index + 1}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${escapeHtml(formatDemandaDisplay(demanda.demanda))}</td>
-            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${escapeHtml(demanda.contato)}</td>
+            <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300"><button type="button" data-contato="${escapeHtml(demanda.contato)}" class="demand-contact-btn text-indigo-600 dark:text-indigo-400 hover:underline font-medium text-left">${escapeHtml(demanda.contato)}</button></td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${escapeHtml(demanda.descricao)}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${escapeHtml(demanda.data_registro ? new Date(demanda.data_registro).toLocaleDateString('pt-BR') : '-')}</td>
             <td class="px-6 py-4 text-sm text-gray-500 dark:text-gray-300">${escapeHtml(demanda.data_conclusao ? new Date(demanda.data_conclusao).toLocaleDateString('pt-BR') : '-')}</td>
@@ -563,6 +563,11 @@ window.onload = function () {
         });
 
         // Adiciona listeners de evento para os botões de edição/exclusão
+        document.querySelectorAll('.demand-contact-btn').forEach((button) => {
+            button.addEventListener('click', () => {
+                openContactDetailsModal(button.dataset.contato);
+            });
+        });
         document.querySelectorAll('.edit-demand-btn').forEach((button) => {
             button.addEventListener('click', (e) => {
                 handleDemandAction('edit', e.target.dataset.id);
@@ -692,7 +697,10 @@ window.onload = function () {
     // ATUALIZAR carregarContatos
     async function carregarContatos() {
         if (!isAuthenticated) return;
-        const { data, error } = await supabase.from('Contatos').select('ID, nome, telefone, regiao, endereco, user_id').order('ID', { ascending: false });
+        const { data, error } = await supabase
+            .from('Contatos')
+            .select('ID, nome, telefone, regiao, endereco, user_id, cartao_sus, cpf')
+            .order('ID', { ascending: false });
         if (error) {
             handleSupabaseError(error, 'Erro ao carregar contatos');
         } else {
@@ -1174,8 +1182,39 @@ window.onload = function () {
     const contactModalTitle = document.getElementById('contactModalTitle');
     const contactIdToUpdateInput = document.getElementById('contactIdToUpdateInput');
 
+    function openContactDetailsModal(contactName) {
+        const contato = contatosCache.find((c) => c.nome === contactName);
+        const content = document.getElementById('contactDetailsContent');
+        content.innerHTML = '';
+
+        if (!contato) {
+            content.innerHTML = `<div><dt class="font-semibold text-gray-500 dark:text-gray-400">Nome</dt><dd class="text-gray-900 dark:text-gray-100">${escapeHtml(contactName)}</dd><p class="text-xs text-gray-500 dark:text-gray-400">Contato não encontrado no cache local.</p></div>`;
+        } else {
+            const fields = [
+                ['Nome', contato.nome],
+                ['Telefone', contato.telefone],
+                ['Região', contato.regiao],
+                ['Endereço', contato.endereco],
+                ['CPF', contato.cpf],
+                ['Cartão SUS', contato.cartao_sus],
+            ];
+            for (const [label, value] of fields) {
+                const div = document.createElement('div');
+                div.innerHTML = `<dt class="font-semibold text-gray-500 dark:text-gray-400">${escapeHtml(label)}</dt><dd class="text-gray-900 dark:text-gray-100">${value ? escapeHtml(value) : '-'}</dd>`;
+                content.appendChild(div);
+            }
+        }
+        document.getElementById('contactDetailsModal').classList.remove('hidden');
+    }
+
+    document.getElementById('closeContactDetailsModalButton').addEventListener('click', () => {
+        document.getElementById('contactDetailsModal').classList.add('hidden');
+    });
+
     function resetContactForm() {
         contactForm.reset();
+        document.getElementById('contactCartaoSus').value = '';
+        document.getElementById('contactCpf').value = '';
         contactModalTitle.textContent = 'Adicionar Novo Contato';
         contactIdToUpdateInput.value = '';
     }
@@ -1199,6 +1238,8 @@ window.onload = function () {
             // O valor deve ser definido diretamente no elemento SELECT
             document.getElementById('contactRegion').value = contato.regiao || '';
             document.getElementById('contactAddress').value = contato.endereco || '';
+            document.getElementById('contactCartaoSus').value = contato.cartao_sus || '';
+            document.getElementById('contactCpf').value = contato.cpf || '';
             // email e tipo não são exibidos no modal
             contactModal.classList.remove('hidden');
         } else {
@@ -1225,7 +1266,9 @@ window.onload = function () {
             return;
         }
 
-        const dataToSave = { nome, telefone, regiao, endereco, user_id: user.id };
+        const cartao_sus = document.getElementById('contactCartaoSus').value;
+        const cpf = document.getElementById('contactCpf').value;
+        const dataToSave = { nome, telefone, regiao, endereco, cartao_sus, cpf, user_id: user.id };
 
         if (contactId) {
             // Atualizar
