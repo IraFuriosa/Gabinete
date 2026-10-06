@@ -1,6 +1,22 @@
 import { escapeHtml } from './utils.js';
 import { createClient } from '@supabase/supabase-js';
 import Chart from 'chart.js/auto';
+import { showToast } from './ui/toast.js';
+
+// Trata erros do Supabase de forma centralizada, com mensagem amigável.
+function handleSupabaseError(error, context) {
+    console.error(context, error);
+    const msg = (error && error.message) || '';
+    if (msg.includes('row-level security')) {
+        showToast('Sem permissão: faça login novamente ou contate o administrador.', 'error');
+    } else if (msg.includes('JWT') || msg.includes('expired')) {
+        showToast('Sessão expirada. Faça login novamente.', 'error');
+    } else if (msg.includes('Failed to fetch') || msg.includes('NetworkError')) {
+        showToast('Sem conexão com o servidor. Verifique sua internet.', 'error');
+    } else {
+        showToast(`${context}: ${msg || 'erro desconhecido'}`, 'error');
+    }
+}
 
 window.onload = function () {
     // Configuração do Supabase Client (mantida como estava)
@@ -71,7 +87,7 @@ window.onload = function () {
 
     function exportToCSV(data, filename) {
         if (!data || data.length === 0) {
-            showModal('Aviso', 'Não há dados para exportar.');
+            showToast('Não há dados para exportar.', 'info');
             return;
         }
 
@@ -122,7 +138,7 @@ window.onload = function () {
         // Get user first
         supabase.auth.getUser().then(({ data: { user } }) => {
             if (!user) {
-                showModal('Erro', 'Você não está autenticado para importar dados.');
+                showToast('Você não está autenticado para importar dados.', 'error');
                 return;
             }
 
@@ -131,7 +147,7 @@ window.onload = function () {
                 const csv = event.target.result;
                 const lines = csv.split(/\r\n|\n/);
                 if (lines.length < 2) {
-                    showModal('Erro de Importação', 'O arquivo CSV está vazio ou não contém dados.');
+                    showToast('O arquivo CSV está vazio ou não contém dados.', 'error');
                     return;
                 }
 
@@ -166,17 +182,17 @@ window.onload = function () {
                 if (dataToInsert.length > 0) {
                     const { error } = await supabase.from(tableName).insert(dataToInsert);
                     if (error) {
-                        showModal('Erro de Importação', `Falha ao importar dados: ${error.message}`);
+                        handleSupabaseError(error, 'Falha ao importar dados');
                     } else {
-                        showModal('Sucesso', `${dataToInsert.length} registros importados com sucesso!`);
+                        showToast(`${dataToInsert.length} registros importados com sucesso!`, 'success');
                         callback(); // Recarrega os dados da tabela
                     }
                 } else {
-                    showModal('Aviso', 'Nenhum registro válido encontrado no arquivo para importação.');
+                    showToast('Nenhum registro válido encontrado no arquivo para importação.', 'info');
                 }
             };
             reader.onerror = () => {
-                showModal('Erro de Leitura', 'Não foi possível ler o arquivo selecionado.');
+                showToast('Não foi possível ler o arquivo selecionado.', 'error');
             };
             reader.readAsText(file);
         });
@@ -215,7 +231,7 @@ window.onload = function () {
 
                 document.getElementById('demandModal').classList.remove('hidden');
             } else {
-                showModal('Erro', 'Demanda não encontrada para edição.');
+                showToast('Demanda não encontrada para edição.', 'error');
             }
         } else if (action === 'delete') {
             // Abre o modal de confirmação e passa a função de exclusão como callback
@@ -224,26 +240,16 @@ window.onload = function () {
 
                 if (error) {
                     console.error('Erro ao excluir demanda:', error);
-                    showModal('Erro', `Erro ao excluir demanda: ${error.message}`);
+                    handleSupabaseError(error, 'Erro ao excluir demanda');
                 } else {
                     await carregarDemandas();
-                    showModal('Sucesso', 'Demanda excluída com sucesso!');
+                    showToast('Demanda excluída com sucesso!', 'success');
                 }
             });
         } else {
             console.error(`Ação desconhecida: ${action}`);
         }
     }
-
-    function showModal(title, message) {
-        document.getElementById('modalTitle').textContent = title;
-        document.getElementById('modalMessage').textContent = message;
-        document.getElementById('genericModal').classList.remove('hidden');
-    }
-
-    document.getElementById('closeGenericModalButton').addEventListener('click', () => {
-        document.getElementById('genericModal').classList.add('hidden');
-    });
 
     function toggleDarkMode(isDark) {
         if (isDark) {
@@ -663,14 +669,11 @@ window.onload = function () {
     async function carregarDemandas() {
         if (!isAuthenticated) return;
         // Sorting is now handled by applyDemandasFilter after fetching
+        document.getElementById('demandasList').innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando demandas…</td></tr>';
         const { data, error } = await supabase.from('Demandas Ativas').select('*');
 
         if (error) {
-            console.error('Erro ao carregar demandas:', error);
-            showModal(
-                'Erro de Conexão',
-                'Não foi possível carregar as demandas. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)',
-            );
+            handleSupabaseError(error, 'Erro ao carregar demandas');
         } else {
             demandasCache = data;
             // Update UI elements that depend on the full, unfiltered cache
@@ -691,11 +694,7 @@ window.onload = function () {
         if (!isAuthenticated) return;
         const { data, error } = await supabase.from('Contatos').select('ID, nome, telefone, regiao, endereco, user_id').order('ID', { ascending: false });
         if (error) {
-            console.error('Erro ao carregar contatos:', error);
-            showModal(
-                'Erro de Conexão',
-                'Não foi possível carregar os contatos. Verifique se a URL e a chave do Supabase estão corretas. (Erro: Falha ao buscar)',
-            );
+            handleSupabaseError(error, 'Erro ao carregar contatos');
         } else {
             contatosCache = data;
             renderContatos(); // Renderiza com dados frescos
@@ -814,10 +813,10 @@ window.onload = function () {
 
             if (error) {
                 console.error('Erro ao excluir contato:', error);
-                showModal('Erro', `Erro ao excluir contato: ${error.message}`);
+                handleSupabaseError(error, 'Erro ao excluir contato');
             } else {
                 await carregarContatos();
-                showModal('Sucesso', 'Contato excluído com sucesso!');
+                showToast('Contato excluído com sucesso!', 'success');
             }
         });
     }
@@ -1102,7 +1101,7 @@ window.onload = function () {
 
         // Validação para garantir que pelo menos uma demanda foi selecionada
         if (demanda.length === 0) {
-            showModal('Atenção', 'Por favor, selecione pelo menos uma demanda.');
+            showToast('Por favor, selecione pelo menos uma demanda.', 'info');
             return;
         }
 
@@ -1110,7 +1109,7 @@ window.onload = function () {
             data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-            showModal('Erro', 'Você não está autenticado.');
+            showToast('Você não está autenticado.', 'error');
             return;
         }
 
@@ -1130,12 +1129,12 @@ window.onload = function () {
 
         if (error) {
             console.error('Erro ao processar demanda:', error);
-            showModal('Erro', `Erro ao processar demanda: ${error.message}`);
+            handleSupabaseError(error, 'Erro ao processar demanda');
         } else {
             demandModal.classList.add('hidden');
             resetDemandForm();
             await carregarDemandas();
-            showModal('Sucesso', message);
+            showToast(message, 'success');
         }
     });
 
@@ -1203,7 +1202,7 @@ window.onload = function () {
             // email e tipo não são exibidos no modal
             contactModal.classList.remove('hidden');
         } else {
-            showModal('Erro', 'Contato não encontrado.');
+            showToast('Contato não encontrado.', 'error');
         }
     }
 
@@ -1222,7 +1221,7 @@ window.onload = function () {
             data: { user },
         } = await supabase.auth.getUser();
         if (!user) {
-            showModal('Erro', 'Você não está autenticado.');
+            showToast('Você não está autenticado.', 'error');
             return;
         }
 
@@ -1242,12 +1241,12 @@ window.onload = function () {
 
         if (error) {
             console.error('Erro ao processar contato:', error);
-            showModal('Erro', `Erro ao processar contato: ${error.message}`);
+            handleSupabaseError(error, 'Erro ao processar contato');
         } else {
             contactModal.classList.add('hidden');
             resetContactForm();
             await carregarContatos();
-            showModal('Sucesso', message);
+            showToast(message, 'success');
         }
     });
     //Formatação de exibição de telefone no cadastro de contatos
