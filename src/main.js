@@ -2,6 +2,7 @@ import { escapeHtml } from './utils.js';
 import { createClient } from '@supabase/supabase-js';
 import Chart from 'chart.js/auto';
 import { showToast } from './ui/toast.js';
+import { loadAttachments, uploadAttachment } from './ui/attachments.js';
 
 // Trata erros do Supabase de forma centralizada, com mensagem amigável.
 function handleSupabaseError(error, context) {
@@ -230,6 +231,9 @@ window.onload = function () {
                 document.getElementById('demandStatus').value = demanda.status;
 
                 document.getElementById('demandModal').classList.remove('hidden');
+                document.getElementById('demandAttachmentsSection').classList.remove('hidden');
+                document.getElementById('demandAttachmentsHint').classList.add('hidden');
+                void loadAttachments(supabase, 'demandas', id, document.getElementById('demandAttachmentsList'));
             } else {
                 showToast('Demanda não encontrada para edição.', 'error');
             }
@@ -1090,6 +1094,21 @@ window.onload = function () {
     document.getElementById('addDemandButton').addEventListener('click', () => {
         resetDemandForm();
         demandModal.classList.remove('hidden');
+        document.getElementById('demandAttachmentsSection').classList.remove('hidden');
+        document.getElementById('demandAttachmentsHint').classList.remove('hidden');
+        document.getElementById('demandAttachmentsList').innerHTML = '';
+    });
+
+    document.getElementById('demandAttachmentInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const id = document.getElementById('demandIdToUpdateInput').value;
+        if (!file || !id) return;
+        const ok = await uploadAttachment(supabase, 'demandas', id, file);
+        if (ok) {
+            showToast('Anexo enviado com sucesso!', 'success');
+            void loadAttachments(supabase, 'demandas', id, document.getElementById('demandAttachmentsList'));
+        }
+        e.target.value = '';
     });
 
     document.getElementById('closeDemandModalButton').addEventListener('click', () => demandModal.classList.add('hidden'));
@@ -1222,6 +1241,21 @@ window.onload = function () {
     document.getElementById('addContactButton').addEventListener('click', () => {
         resetContactForm();
         contactModal.classList.remove('hidden');
+        document.getElementById('contactAttachmentsSection').classList.remove('hidden');
+        document.getElementById('contactAttachmentsHint').classList.remove('hidden');
+        document.getElementById('contactAttachmentsList').innerHTML = '';
+    });
+
+    document.getElementById('contactAttachmentInput').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        const id = document.getElementById('contactIdToUpdateInput').value;
+        if (!file || !id) return;
+        const ok = await uploadAttachment(supabase, 'contatos', id, file);
+        if (ok) {
+            showToast('Anexo enviado com sucesso!', 'success');
+            void loadAttachments(supabase, 'contatos', id, document.getElementById('contactAttachmentsList'));
+        }
+        e.target.value = '';
     });
 
     document.getElementById('closeContactModalButton').addEventListener('click', () => {
@@ -1242,6 +1276,9 @@ window.onload = function () {
             document.getElementById('contactCpf').value = contato.cpf || '';
             // email e tipo não são exibidos no modal
             contactModal.classList.remove('hidden');
+            document.getElementById('contactAttachmentsSection').classList.remove('hidden');
+            document.getElementById('contactAttachmentsHint').classList.add('hidden');
+            void loadAttachments(supabase, 'contatos', id, document.getElementById('contactAttachmentsList'));
         } else {
             showToast('Contato não encontrado.', 'error');
         }
