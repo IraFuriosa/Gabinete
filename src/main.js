@@ -20,19 +20,29 @@ function handleSupabaseError(error, context) {
 }
 
 window.onload = function () {
-    // Configuração do Supabase Client (mantida como estava)
-    const SUPABASE_URL = 'https://czixoasuvhpxrldypzpz.supabase.co'; // !!! SUBSTITUIR PELA SUA URL REAL AQUI !!!
-    const SUPABASE_ANON_KEY =
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImN6aXhvYXN1dmhweHJsZHlwenB6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTg2MjkzOTUsImV4cCI6MjA3NDIwNTM5NX0.msRmh-jYGjIOHDChgf8VWjiG7bzyIdh0M60YThv9Dtw'; // !!! SUBSTITUIR PELA SUA CHAVE ANON REAL AQUI !!!
+    // Configuração do Supabase Client via variáveis de ambiente
+    const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+    const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    
+    if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+        console.error('Variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY são obrigatórias');
+        showToast('Erro de configuração: variáveis de ambiente não definidas', 'error');
+        return;
+    }
+    
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    // Variáveis de Estado (mantidas como estavam)
-    let demandasCache = [];
-    let contatosCache = [];
-    let statusChart;
-    let sortColumn = 'updated_at';
-    let sortDirection = 'desc';
-    let isAuthenticated = false;
+    // Variáveis de Estado encapsuladas
+    const state = {
+        demandasCache: [],
+        contatosCache: [],
+        statusChart: null,
+        sortColumn: 'updated_at',
+        sortDirection: 'desc',
+        isAuthenticated: false,
+        isLoadingDemandas: false,
+        isLoadingContatos: false,
+    };
 
     function showMainApp(userEmail) {
         document.getElementById('loginScreen').style.display = 'none';
@@ -41,8 +51,8 @@ window.onload = function () {
             document.getElementById('userName').textContent = userEmail;
         }
         initializeCharts(); // Inicializa gráficos para evitar erros
-        carregarContatos();
-        carregarDemandas();
+        void carregarContatos();
+        void carregarDemandas();
     }
 
     function showLoginScreen() {
@@ -55,10 +65,10 @@ window.onload = function () {
     // podia setar isAuthenticated=true no DevTools.
     supabase.auth.getSession().then(({ data: { session } }) => {
         if (session && session.user) {
-            isAuthenticated = true;
+            state.isAuthenticated = true;
             showMainApp(session.user.email);
         } else {
-            isAuthenticated = false;
+            state.isAuthenticated = false;
             showLoginScreen();
         }
     });
@@ -66,14 +76,14 @@ window.onload = function () {
     // Reage a login/logout/expiração de token em qualquer aba
     supabase.auth.onAuthStateChange((_event, session) => {
         if (session && session.user) {
-            if (!isAuthenticated) {
-                isAuthenticated = true;
+            if (!state.isAuthenticated) {
+                state.isAuthenticated = true;
                 showMainApp(session.user.email);
             }
         } else {
-            isAuthenticated = false;
-            demandasCache = [];
-            contatosCache = [];
+            state.isAuthenticated = false;
+            state.demandasCache = [];
+            state.contatosCache = [];
             showLoginScreen();
         }
     });
@@ -133,6 +143,64 @@ window.onload = function () {
         }
     }
 
+    // Parser CSV robusto que lida com vírgulas dentro de aspas e quebras de linha
+    function parseCSV(csvText) {
+        const rows = [];
+        let currentRow = [];
+        let currentValue = '';
+        let insideQuotes = false;
+        
+        for (let i = 0; i < csvText.length; i++) {
+            const char = csvText[i];
+            const nextChar = csvText[i + 1];
+            
+            if (insideQuotes) {
+                if (char === '"' && nextChar === '"') {
+                    // Escaped quote
+                    currentValue += '"';
+                    i++; // Skip next quote
+                } else if (char === '"') {
+                    // End of quoted value
+                    insideQuotes = false;
+                } else {
+                    currentValue += char;
+                }
+            } else {
+                if (char === '"') {
+                    // Start of quoted value
+                    insideQuotes = true;
+                } else if (char === ',') {
+                    // End of value
+                    currentRow.push(currentValue.trim());
+                    currentValue = '';
+                } else if (char === '\n' || char === '\r') {
+                    // End of row
+                    if (char === '\r' && nextChar === '\n') {
+                        i++; // Skip \n in \r\n
+                    }
+                    currentRow.push(currentValue.trim());
+                    if (currentRow.some((v) => v !== '')) {
+                        rows.push(currentRow);
+                    }
+                    currentRow = [];
+                    currentValue = '';
+                } else {
+                    currentValue += char;
+                }
+            }
+        }
+        
+        // Add last row if exists
+        if (currentValue || currentRow.length > 0) {
+            currentRow.push(currentValue.trim());
+            if (currentRow.some((v) => v !== '')) {
+                rows.push(currentRow);
+            }
+        }
+        
+        return rows;
+    }
+
     function handleCsvImport(file, tableName, requiredFields, callback) {
         if (!file) return;
 
@@ -146,23 +214,22 @@ window.onload = function () {
             const reader = new FileReader();
             reader.onload = async (event) => {
                 const csv = event.target.result;
-                const lines = csv.split(/\r\n|\n/);
-                if (lines.length < 2) {
+                const rows = parseCSV(csv);
+                
+                if (rows.length < 2) {
                     showToast('O arquivo CSV está vazio ou não contém dados.', 'error');
                     return;
                 }
 
-                const headers = lines[0].split(',').map((h) => h.trim().replace(/"/g, ''));
+                const headers = rows[0].map((h) => h.trim());
                 const dataToInsert = [];
 
-                for (let i = 1; i < lines.length; i++) {
-                    const line = lines[i];
-                    if (!line.trim()) continue;
-
-                    const values = line.split(','); // Simplificado: não lida com vírgulas dentro de aspas
-                    const obj = { user_id: user.id }; // Add user_id here
+                for (let i = 1; i < rows.length; i++) {
+                    const values = rows[i];
+                    const obj = { user_id: user.id };
+                    
                     for (let j = 0; j < headers.length; j++) {
-                        let value = values[j] ? values[j].trim().replace(/"/g, '') : '';
+                        let value = values[j] ? values[j].trim() : '';
                         // Tratamento especial para o campo 'demanda' que pode ser múltiplo
                         if (headers[j] === 'demanda' && value.includes(';')) {
                             obj[headers[j]] = value.split(';').map((s) => s.trim());
@@ -203,7 +270,7 @@ window.onload = function () {
     async function handleDemandAction(action, id) {
         if (action === 'edit') {
             // CORREÇÃO: Busca usando o ID real (d.ID), que é o valor em data-id do botão.
-            const demanda = demandasCache.find((d) => String(d.ID) === id);
+            const demanda = state.demandasCache.find((d) => String(d.ID) === id);
 
             if (demanda) {
                 // Chamadas essenciais para garantir que os SELECTs estejam populados antes de abrir
@@ -276,10 +343,10 @@ window.onload = function () {
     // Funções de Inicialização de Gráficos (Dashboard)
     function initializeCharts() {
         const ctx = document.getElementById('demandasStatusChart').getContext('2d');
-        if (statusChart) {
-            statusChart.destroy();
+        if (state.statusChart) {
+            state.statusChart.destroy();
         }
-        statusChart = new Chart(ctx, {
+        state.statusChart = new Chart(ctx, {
             type: 'pie',
             data: {
                 // Labels atualizadas para refletir os novos status em pt-BR
@@ -329,17 +396,17 @@ window.onload = function () {
 
     function updateDashboardMetrics() {
         // Métrica 1: Total de Contatos
-        const totalContatos = contatosCache.length;
+        const totalContatos = state.contatosCache.length;
         const totalContatosEl = document.getElementById('totalContatos');
         if (totalContatosEl) totalContatosEl.textContent = totalContatos;
 
         // Métrica 2: Total de Demandas Registradas
-        const totalDemandasRegistradas = demandasCache.length;
+        const totalDemandasRegistradas = state.demandasCache.length;
         const totalDemandasRegistradasEl = document.getElementById('totalDemandasRegistradas');
         if (totalDemandasRegistradasEl) totalDemandasRegistradasEl.textContent = totalDemandasRegistradas;
 
         // Contagem por Status usando o cache de demandas
-        const statusCounts = demandasCache.reduce((acc, demanda) => {
+        const statusCounts = state.demandasCache.reduce((acc, demanda) => {
             // Usa o status exato em pt-BR
             acc[demanda.status] = (acc[demanda.status] || 0) + 1;
             return acc;
@@ -362,10 +429,10 @@ window.onload = function () {
 
         // Atualiza o gráfico
         const cancelada = statusCounts['Cancelada'] || 0;
-        if (statusChart) {
+        if (state.statusChart) {
             // A ordem dos dados DEVE corresponder à ordem das labels no initializeCharts
-            statusChart.data.datasets[0].data = [emAberto, emAndamento, concluidas, cancelada];
-            statusChart.update();
+            state.statusChart.data.datasets[0].data = [emAberto, emAndamento, concluidas, cancelada];
+            state.statusChart.update();
         }
 
         // Top 5 Demandas (simplificado: 5 mais recentes)
@@ -373,11 +440,11 @@ window.onload = function () {
         if (topList) {
             // Verifica se o elemento Top List existe
             topList.innerHTML = '';
-            if (demandasCache.length === 0) {
+            if (state.demandasCache.length === 0) {
                 topList.innerHTML = '<li class="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg text-sm font-medium">Nenhuma demanda ainda.</li>';
             } else {
                 // Cria uma cópia do cache e ordena por 'updated_at' (ou 'data_registro' como fallback)
-                const sortedDemandas = [...demandasCache].sort((a, b) => {
+                const sortedDemandas = [...state.demandasCache].sort((a, b) => {
                     const dateA = new Date(a.updated_at || a.data_registro);
                     const dateB = new Date(b.updated_at || b.data_registro);
                     return dateB - dateA; // Ordena do mais recente para o mais antigo
@@ -399,7 +466,7 @@ window.onload = function () {
         const proximasAcoesList = document.getElementById('proximasAcoesList');
         if (proximasAcoesList) {
             proximasAcoesList.innerHTML = '';
-            const acoes = demandasCache
+            const acoes = state.demandasCache
                 .filter((d) => d.data_seguimento && d.status !== 'Concluída' && d.status !== 'Cancelada')
                 .sort((a, b) => new Date(a.data_seguimento) - new Date(b.data_seguimento));
 
@@ -454,7 +521,7 @@ window.onload = function () {
         select.innerHTML = '<option value="">Todas as Regiões</option>'; // Placeholder
 
         // Extrai regiões únicas do cache de contatos
-        const allRegioes = contatosCache.map((c) => c.regiao).filter((r) => r && r.trim() !== '');
+        const allRegioes = state.contatosCache.map((c) => c.regiao).filter((r) => r && r.trim() !== '');
         const uniqueRegioes = [...new Set(allRegioes)].sort();
 
         uniqueRegioes.forEach((regiao) => {
@@ -489,10 +556,10 @@ window.onload = function () {
 
     // Função para aplicar o filtro em Demandas
     function applyDemandasFilter() {
-        let filtered = demandasCache;
+        let filtered = state.demandasCache;
 
         if (demandasFilters.contato) {
-            filtered = filtered.filter((d) => d.contato.toLowerCase().includes(demandasFilters.contato.toLowerCase()));
+            filtered = filtered.filter((d) => (d.contato || '').toLowerCase().includes(demandasFilters.contato.toLowerCase()));
         }
         if (demandasFilters.status) {
             filtered = filtered.filter((d) => d.status === demandasFilters.status);
@@ -500,7 +567,7 @@ window.onload = function () {
 
         // NEW: Sorting logic is moved here
         const statusOrder = { 'Em Aberto': 1, 'Em Andamento': 2, Concluída: 3, Cancelada: 4 };
-        const sortAsc = sortDirection === 'asc';
+        const sortAsc = state.sortDirection === 'asc';
 
         filtered.sort((a, b) => {
             const orderA = statusOrder[a.status] || 99;
@@ -509,8 +576,8 @@ window.onload = function () {
                 return orderA - orderB;
             }
             // Secondary sort (the one user selected)
-            const valA = a[sortColumn];
-            const valB = b[sortColumn];
+            const valA = a[state.sortColumn];
+            const valB = b[state.sortColumn];
 
             // Handle null or undefined values
             if (valA == null && valB == null) return 0;
@@ -536,10 +603,10 @@ window.onload = function () {
 
     // Função para aplicar o filtro em Contatos
     function applyContatosFilter() {
-        let filtered = contatosCache;
+        let filtered = state.contatosCache;
 
         if (contatosFilters.nome) {
-            filtered = filtered.filter((c) => c.nome.toLowerCase().includes(contatosFilters.nome.toLowerCase()));
+            filtered = filtered.filter((c) => (c.nome || '').toLowerCase().includes(contatosFilters.nome.toLowerCase()));
         }
         if (contatosFilters.regiao) {
             filtered = filtered.filter((c) => c.regiao === contatosFilters.regiao);
@@ -551,7 +618,7 @@ window.onload = function () {
     }
 
     // Função para renderizar Demandas com filtros aplicados (recebe o array filtrado)
-    function renderDemandas(dataToRender = demandasCache) {
+    function renderDemandas(dataToRender = state.demandasCache) {
         const list = document.getElementById('demandasList');
         list.innerHTML = ''; // Limpa a lista atual
 
@@ -613,7 +680,7 @@ window.onload = function () {
     }
 
     // Função para renderizar Contatos com filtros aplicados (recebe o array filtrado)
-    function renderContatos(dataToRender = contatosCache) {
+    function renderContatos(dataToRender = state.contatosCache) {
         const list = document.getElementById('contatosList');
         list.innerHTML = ''; // Limpa a lista atual
 
@@ -706,45 +773,57 @@ window.onload = function () {
 
     // ATUALIZAR carregarDemandas
     async function carregarDemandas() {
-        if (!isAuthenticated) return;
+        if (!state.isAuthenticated || state.isLoadingDemandas) return;
+        
+        state.isLoadingDemandas = true;
         // Sorting is now handled by applyDemandasFilter after fetching
         document.getElementById('demandasList').innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando demandas…</td></tr>';
-        const { data, error } = await supabase.from('Demandas Ativas').select('*');
+        
+        try {
+            const { data, error } = await supabase.from('Demandas Ativas').select('*');
 
-        if (error) {
-            handleSupabaseError(error, 'Erro ao carregar demandas');
-        } else {
-            demandasCache = data;
-            // Update UI elements that depend on the full, unfiltered cache
-            updateDashboardMetrics();
-            updateDemandasStatusFilterOptions();
-            loadRegiaoOptions(); // This is for the contact form, but let's keep it here
+            if (error) {
+                handleSupabaseError(error, 'Erro ao carregar demandas');
+            } else {
+                state.demandasCache = data;
+                // Update UI elements that depend on the full, unfiltered cache
+                updateDashboardMetrics();
+                updateDemandasStatusFilterOptions();
+                loadRegiaoOptions(); // This is for the contact form, but let's keep it here
 
-            // Apply current filters and sort order, then render the table
-            applyDemandasFilter();
+                // Apply current filters and sort order, then render the table
+                applyDemandasFilter();
 
-            // Update sort icons after filters are applied and table is potentially rendered
-            updateSortIcons();
+                // Update sort icons after filters are applied and table is potentially rendered
+                updateSortIcons();
+            }
+        } finally {
+            state.isLoadingDemandas = false;
         }
     }
 
     // ATUALIZAR carregarContatos
     async function carregarContatos() {
-        if (!isAuthenticated) return;
+        if (!state.isAuthenticated || state.isLoadingContatos) return;
+
+        state.isLoadingContatos = true;
         document.getElementById('contatosList').innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando contatos…</td></tr>';
-        const { data, error } = await supabase
-            .from('Contatos')
-            .select('ID, nome, telefone, regiao, endereco, user_id, cartao_sus, cpf')
-            .order('ID', { ascending: false });
-        if (error) {
-            handleSupabaseError(error, 'Erro ao carregar contatos');
-        } else {
-            contatosCache = data;
-            renderContatos(); // Renderiza com dados frescos
-            updateDashboardMetrics(); // Atualiza dashboard
-            updateContatosRegiaoFilterOptions(); // Atualiza opções de filtro
-            applyContatosFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
-            console.log('Contatos carregados:', contatosCache);
+        try {
+            const { data, error } = await supabase
+                .from('Contatos')
+                .select('ID, nome, telefone, regiao, endereco, user_id, cartao_sus, cpf')
+                .order('ID', { ascending: false });
+            if (error) {
+                handleSupabaseError(error, 'Erro ao carregar contatos');
+            } else {
+                state.contatosCache = data;
+                renderContatos(); // Renderiza com dados frescos
+                updateDashboardMetrics(); // Atualiza dashboard
+                updateContatosRegiaoFilterOptions(); // Atualiza opções de filtro
+                applyContatosFilter(); // Aplica filtros existentes (ou renderiza tudo se nenhum aplicado)
+            }
+        } finally {
+            state.isLoadingContatos = false;
         }
     }
 
@@ -752,7 +831,7 @@ window.onload = function () {
         const select = document.getElementById('demandContactNameSelect');
         select.innerHTML = '<option value="">Selecione um contato</option>';
 
-        contatosCache.forEach((contato) => {
+        state.contatosCache.forEach((contato) => {
             const option = document.createElement('option');
             option.value = contato.nome; // ou contato.ID se quiser usar ID
             option.textContent = contato.nome;
@@ -762,7 +841,7 @@ window.onload = function () {
 
     // A nova função loadDemandasOptions() que você precisa para carregar os dados.
     async function loadDemandasOptions() {
-        if (!isAuthenticated) return;
+        if (!state.isAuthenticated) return;
         const selectElement = document.getElementById('demandTitleSelect');
         selectElement.innerHTML = '<option value="">Carregando opções...</option>'; // Placeholder temporário
 
@@ -785,7 +864,8 @@ window.onload = function () {
 
         // Percorre todos os itens retornados, sem remover duplicatas
         data.forEach((demanda) => {
-            const trimmedDemanda = demanda.Demanda.trim(); // Trim here
+            const trimmedDemanda = (demanda.Demanda || '').trim();
+            if (!trimmedDemanda) return; // ignora valores nulos/vazios
             const option = document.createElement('option');
             option.value = trimmedDemanda; // Use trimmed value
             option.textContent = trimmedDemanda; // Use trimmed value
@@ -802,15 +882,18 @@ window.onload = function () {
     // Outras funções e event listeners
     // ...
 
-    // Atualizado: O event listener para o botão de 'Nova Demanda' agora chama a nova função.
+    // Event listener para o botão de 'Nova Demanda'.
     document.getElementById('addDemandButton').addEventListener('click', () => {
         resetDemandForm();
         populateContactSelect(); // Garante que os contatos estão no select
-        loadDemandasOptions();
+        void loadDemandasOptions();
         demandModal.classList.remove('hidden');
+        document.getElementById('demandAttachmentsSection').classList.remove('hidden');
+        document.getElementById('demandAttachmentsHint').classList.remove('hidden');
+        document.getElementById('demandAttachmentsList').innerHTML = '';
     });
     async function loadRegiaoOptions() {
-        if (!isAuthenticated) return;
+        if (!state.isAuthenticated) return;
         const selectElement = document.getElementById('contactRegion');
         selectElement.innerHTML = '<option value="">Carregando opções...</option>'; // Placeholder temporário
 
@@ -848,7 +931,7 @@ window.onload = function () {
     }
 
     function deleteContact(id) {
-        const contato = contatosCache.find((c) => String(c.ID) === id);
+        const contato = state.contatosCache.find((c) => String(c.ID) === id);
         const nomeContato = contato ? `o contato "${escapeHtml(contato.nome)}"` : `o item #${id}`;
 
         openConfirmationModal(nomeContato, async () => {
@@ -914,7 +997,7 @@ window.onload = function () {
             loginMessage.textContent = `Falha no login: ${error.message}`;
             loginMessage.classList.remove('hidden');
         } else if (data.session && data.user) {
-            isAuthenticated = true;
+            state.isAuthenticated = true;
 
             document.getElementById('loginScreen').style.display = 'none';
             document.getElementById('mainApp').style.display = 'flex';
@@ -932,11 +1015,11 @@ window.onload = function () {
     // ...
 
     document.getElementById('logoutButton').addEventListener('click', () => {
-        isAuthenticated = false;
+        state.isAuthenticated = false;
         void supabase.auth.signOut();
 
-        demandasCache = [];
-        contatosCache = [];
+        state.demandasCache = [];
+        state.contatosCache = [];
         document.getElementById('loginForm').reset(); // <-- Limpa os campos de email e senha
         document.getElementById('loginScreen').style.display = 'flex';
         document.getElementById('mainApp').style.display = 'none';
@@ -987,8 +1070,8 @@ window.onload = function () {
 
             if (tabName === 'dashboard') {
                 // O gráfico já é atualizado ao carregar os dados, mas podemos forçar se necessário
-                if (statusChart) {
-                    statusChart.resize();
+                if (state.statusChart) {
+                    state.statusChart.resize();
                 } else {
                     initializeCharts();
                     updateDashboardMetrics();
@@ -1096,6 +1179,15 @@ window.onload = function () {
         optionsDropdown.classList.remove('hidden');
     });
     searchInput.addEventListener('input', renderDemandOptionsDropdown);
+    
+    // Clique na área de tags foca no input de busca
+    const demandTagsArea = document.getElementById('demandTagsArea');
+    if (demandTagsArea) {
+        demandTagsArea.addEventListener('click', () => {
+            searchInput.focus();
+        });
+    }
+    
     document.addEventListener('click', (e) => {
         if (!customSelect.contains(e.target)) {
             optionsDropdown.classList.add('hidden');
@@ -1122,14 +1214,6 @@ window.onload = function () {
         document.getElementById('demandFollowUpDate').value = ''; // Limpa a data de seguimento
         Array.from(originalSelect.options).forEach((opt) => (opt.selected = false));
     }
-
-    document.getElementById('addDemandButton').addEventListener('click', () => {
-        resetDemandForm();
-        demandModal.classList.remove('hidden');
-        document.getElementById('demandAttachmentsSection').classList.remove('hidden');
-        document.getElementById('demandAttachmentsHint').classList.remove('hidden');
-        document.getElementById('demandAttachmentsList').innerHTML = '';
-    });
 
     document.getElementById('demandAttachmentInput').addEventListener('change', async (e) => {
         const file = e.target.files[0];
@@ -1200,7 +1284,7 @@ window.onload = function () {
 
     // === Lógica de Importação/Exportação ===
     document.getElementById('exportContatosCSV').addEventListener('click', () => {
-        exportToCSV(contatosCache, 'contatos.csv');
+        exportToCSV(state.contatosCache, 'contatos.csv');
     });
 
     document.getElementById('importContatosCSV').addEventListener('click', () => {
@@ -1214,7 +1298,7 @@ window.onload = function () {
     });
 
     document.getElementById('exportDemandasCSV').addEventListener('click', () => {
-        exportToCSV(demandasCache, 'demandas.csv');
+        exportToCSV(state.demandasCache, 'demandas.csv');
     });
 
     document.getElementById('importDemandasCSV').addEventListener('click', () => {
@@ -1235,7 +1319,7 @@ window.onload = function () {
     const contactIdToUpdateInput = document.getElementById('contactIdToUpdateInput');
 
     function openContactDetailsModal(contactName) {
-        const contato = contatosCache.find((c) => c.nome === contactName);
+        const contato = state.contatosCache.find((c) => c.nome === contactName);
         const content = document.getElementById('contactDetailsContent');
         content.innerHTML = '';
 
@@ -1296,7 +1380,7 @@ window.onload = function () {
     });
 
     function openEditContactModal(id) {
-        const contato = contatosCache.find((c) => String(c.ID) === id);
+        const contato = state.contatosCache.find((c) => String(c.ID) === id);
         if (contato) {
             contactModalTitle.textContent = `Editar Contato #${id}`;
             contactIdToUpdateInput.value = id;
@@ -1385,8 +1469,8 @@ window.onload = function () {
     function updateSortIcons() {
         document.querySelectorAll('#demandas th[data-sort]').forEach((header) => {
             const iconSpan = header.querySelector('.sort-icon');
-            if (header.dataset.sort === sortColumn) {
-                if (sortDirection === 'asc') {
+            if (header.dataset.sort === state.sortColumn) {
+                if (state.sortDirection === 'asc') {
                     iconSpan.innerHTML = ' &#9650;'; // up arrow
                 } else {
                     iconSpan.innerHTML = ' &#9660;'; // down arrow
@@ -1400,11 +1484,11 @@ window.onload = function () {
     document.querySelectorAll('#demandas th[data-sort]').forEach((header) => {
         header.addEventListener('click', () => {
             const newSortColumn = header.dataset.sort;
-            if (sortColumn === newSortColumn) {
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            if (state.sortColumn === newSortColumn) {
+                state.sortDirection = state.sortDirection === 'asc' ? 'desc' : 'asc';
             } else {
-                sortColumn = newSortColumn;
-                sortDirection = 'desc';
+                state.sortColumn = newSortColumn;
+                state.sortDirection = 'desc';
             }
             // Re-apply filters and sorting without a new network request
             applyDemandasFilter();

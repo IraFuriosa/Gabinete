@@ -7,7 +7,7 @@ contatos, dashboard com métricas e importação/exportação CSV.
 
 - **Vite** — build e dev server
 - **Tailwind CSS v3** — estilização (modo escuro via classe `dark`)
-- **Chart.js** — gráficos do dashboard (CDN pinada com SRI)
+- **Chart.js** — gráficos do dashboard (bundle npm)
 - **Supabase** — auth (email/senha) + Postgres (`Contatos`, `Demandas`,
   `Demandas Ativas`, `Regioes`)
 
@@ -22,6 +22,31 @@ npm run lint      # ESLint
 npm run format    # Prettier
 npm test          # Vitest
 ```
+
+## Deploy no GitHub Pages
+
+A aplicação é 100% estática (bundle Vite em `dist/`), então roda no
+GitHub Pages. O `vite.config.js` usa `base: './'` (caminhos relativos)
+para funcionar tanto em `usuario.github.io/repo/` quanto em domínio
+personalizado.
+
+1. Faça push do código no GitHub (o workflow
+   `.github/workflows/deploy.yml` builda e publica o `dist/`).
+2. No repositório, vá em **Settings → Pages → Source** e selecione
+   **GitHub Actions**.
+3. O site fica em `https://<usuario>.github.io/Gabinete/` (ou no
+   domínio configurado).
+
+### Supabase
+
+No Dashboard do Supabase, em **Authentication → URL Configuration**:
+
+- **Site URL**: `https://<usuario>.github.io/Gabinete/`
+- **Redirect URLs**: adicione a mesma URL (necessário para fluxos de
+  auth por redirecionamento; o login por senha já funciona sem isso).
+
+A migração de RLS (`supabase/migrations/0001_enable_rls.sql`) precisa
+estar aplicada antes de expor a aplicação publicamente.
 
 ## Configuração do Supabase
 
@@ -45,7 +70,10 @@ adicione coluna de ownership e refine as policies.)
 index.html                  marcação
 src/main.js                 lógica da aplicação
 src/utils.js                helpers (escapeHtml)
+src/ui/toast.js             notificações
+src/ui/attachments.js       anexos no Supabase Storage
 src/styles.css              Tailwind + estilos custom
+src/*.test.js               testes Vitest
 supabase/migrations/        migrações SQL
 ```
 
@@ -54,4 +82,4 @@ supabase/migrations/        migrações SQL
 - Auth real verificada via `supabase.auth.getSession()`; nenhuma flag de
   autenticação é mantida em `sessionStorage`.
 - Todo dado exibido via `innerHTML` passa por `escapeHtml()`.
-- Dependências de CDN pinadas com versão exata + `integrity` SHA-384.
+- Dependências empacotadas no bundle Vite (sem CDN).

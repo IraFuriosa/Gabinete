@@ -1,0 +1,57 @@
+name: Deploy to GitHub Pages
+
+on:
+    push:
+        branches: [main]
+    workflow_dispatch:
+
+permissions:
+    contents: read
+    pages: write
+    id-token: write
+
+concurrency:
+    group: pages
+    cancel-in-progress: true
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24
+                  cache: npm
+
+            - run: npm ci
+
+            # Injeta as variáveis do Supabase (configuradas como Secrets no repositório).
+            # Sem isso o build passa, mas a app falha em runtime.
+            - name: Create .env from secrets
+              run: |
+                  printf 'VITE_SUPABASE_URL=%s\n' "${{ secrets.VITE_SUPABASE_URL }}" > .env
+                  printf 'VITE_SUPABASE_ANON_KEY=%s\n' "${{ secrets.VITE_SUPABASE_ANON_KEY }}" >> .env
+
+            - run: npm run build
+
+            - name: Remover .env do artifact
+              if: always()
+              run: rm -f .env
+
+            - uses: actions/configure-pages@v5
+
+            - uses: actions/upload-pages-artifact@v3
+              with:
+                  path: ./dist
+
+    deploy:
+        environment:
+            name: github-pages
+            url: ${{ steps.deployment.outputs.page_url }}
+        runs-on: ubuntu-latest
+        needs: build
+        steps:
+            - id: deployment
+              uses: actions/deploy-pages@v4

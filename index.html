@@ -3,6 +3,7 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://czixoasuvhpxrldypzpz.supabase.co wss://czixoasuvhpxrldypzpz.supabase.co;" />
         <title>Gerenciador de Gabinete</title>
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght400;500;600;700&display=swap" rel="stylesheet" />
         <link rel="stylesheet" href="/src/styles.css" />
@@ -271,8 +272,8 @@
                                         <div id="customDemandSelect" class="relative">
                                             <!-- A área do "input" que contém as tags e o campo de busca -->
                                             <div
+                                                id="demandTagsArea"
                                                 class="flex flex-wrap gap-2 p-2 border border-gray-200 dark:border-gray-700 rounded-lg bg-gray-50 dark:bg-gray-700/50 cursor-text"
-                                                onclick="document.getElementById('demandSearchInput').focus()"
                                             >
                                                 <div id="demandTagsContainer" class="flex flex-wrap gap-2"></div>
                                                 <input

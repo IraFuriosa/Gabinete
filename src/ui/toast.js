@@ -1,7 +1,7 @@
 const TOAST_TYPES = {
     success: 'bg-green-600',
     error: 'bg-red-600',
-    info: 'bg-indigo-600'
+    info: 'bg-indigo-600',
 };
 
 export function showToast(message, type = 'info') {

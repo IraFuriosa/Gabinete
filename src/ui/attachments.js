@@ -1,7 +1,54 @@
 import { escapeHtml } from '../utils.js';
+import { showToast } from './toast.js';
 
 // Gerencia anexo de arquivos via Supabase Storage no bucket "anexos".
 // Caminhos: contatos/<id>/arquivo e demandas/<id>/arquivo.
+
+// Configuração de validação de upload
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_MIME_TYPES = [
+    'application/pdf',
+    'image/jpeg',
+    'image/png',
+    'image/gif',
+    'image/webp',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'text/plain',
+    'text/csv',
+];
+
+// Sanitiza o nome do arquivo para prevenir path traversal
+function sanitizeFileName(fileName) {
+    // Remove path traversal, caracteres especiais e espaços
+    return fileName
+        .replace(/\.\./g, '')
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, '_')
+        .replace(/^\.+/, '')
+        .toLowerCase();
+}
+
+// Valida o arquivo antes do upload
+function validateFile(file) {
+    if (!file) {
+        return { valid: false, error: 'Nenhum arquivo selecionado.' };
+    }
+    if (file.size > MAX_FILE_SIZE) {
+        return { valid: false, error: 'Arquivo muito grande. Máximo permitido: 10MB.' };
+    }
+    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        return { valid: false, error: 'Tipo de arquivo não permitido.' };
+    }
+    return { valid: true };
+}
+
+// Wrapper para showToast que funciona em contexto de módulo
+function showUploadError(message) {
+    showToast(message, 'error');
+}
 
 export async function loadAttachments(supabase, type, id, listEl) {
     listEl.innerHTML = '<li class="text-xs text-gray-500 dark:text-gray-400">Carregando…</li>';
@@ -33,7 +80,7 @@ export async function loadAttachments(supabase, type, id, listEl) {
         btn.addEventListener('click', async () => {
             const { error: delError } = await supabase.storage.from('anexos').remove([btn.dataset.path]);
             if (delError) {
-                alert('Erro ao excluir: ' + delError.message);
+                showUploadError('Erro ao excluir: ' + delError.message);
             } else {
                 await loadAttachments(supabase, type, id, listEl);
             }
@@ -42,10 +89,17 @@ export async function loadAttachments(supabase, type, id, listEl) {
 }
 
 export async function uploadAttachment(supabase, type, id, file) {
+    const validation = validateFile(file);
+    if (!validation.valid) {
+        showUploadError(validation.error);
+        return false;
+    }
+
     const folder = `${type}/${id}`;
-    const { error } = await supabase.storage.from('anexos').upload(`${folder}/${file.name}`, file, { upsert: true });
+    const sanitizedName = sanitizeFileName(file.name);
+    const { error } = await supabase.storage.from('anexos').upload(`${folder}/${sanitizedName}`, file, { upsert: true });
     if (error) {
-        alert('Erro ao enviar anexo: ' + error.message);
+        showUploadError('Erro ao enviar anexo: ' + error.message);
         return false;
     }
     return true;
