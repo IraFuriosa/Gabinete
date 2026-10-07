@@ -23,13 +23,13 @@ window.onload = function () {
     // Configuração do Supabase Client via variáveis de ambiente
     const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
     const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
-    
+
     if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
         console.error('Variáveis de ambiente VITE_SUPABASE_URL e VITE_SUPABASE_ANON_KEY são obrigatórias');
         showToast('Erro de configuração: variáveis de ambiente não definidas', 'error');
         return;
     }
-    
+
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // Variáveis de Estado encapsuladas
@@ -149,11 +149,11 @@ window.onload = function () {
         let currentRow = [];
         let currentValue = '';
         let insideQuotes = false;
-        
+
         for (let i = 0; i < csvText.length; i++) {
             const char = csvText[i];
             const nextChar = csvText[i + 1];
-            
+
             if (insideQuotes) {
                 if (char === '"' && nextChar === '"') {
                     // Escaped quote
@@ -189,7 +189,7 @@ window.onload = function () {
                 }
             }
         }
-        
+
         // Add last row if exists
         if (currentValue || currentRow.length > 0) {
             currentRow.push(currentValue.trim());
@@ -197,7 +197,7 @@ window.onload = function () {
                 rows.push(currentRow);
             }
         }
-        
+
         return rows;
     }
 
@@ -215,7 +215,7 @@ window.onload = function () {
             reader.onload = async (event) => {
                 const csv = event.target.result;
                 const rows = parseCSV(csv);
-                
+
                 if (rows.length < 2) {
                     showToast('O arquivo CSV está vazio ou não contém dados.', 'error');
                     return;
@@ -227,7 +227,7 @@ window.onload = function () {
                 for (let i = 1; i < rows.length; i++) {
                     const values = rows[i];
                     const obj = { user_id: user.id };
-                    
+
                     for (let j = 0; j < headers.length; j++) {
                         let value = values[j] ? values[j].trim() : '';
                         // Tratamento especial para o campo 'demanda' que pode ser múltiplo
@@ -774,11 +774,11 @@ window.onload = function () {
     // ATUALIZAR carregarDemandas
     async function carregarDemandas() {
         if (!state.isAuthenticated || state.isLoadingDemandas) return;
-        
+
         state.isLoadingDemandas = true;
         // Sorting is now handled by applyDemandasFilter after fetching
         document.getElementById('demandasList').innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">Carregando demandas…</td></tr>';
-        
+
         try {
             const { data, error } = await supabase.from('Demandas Ativas').select('*');
 
@@ -1179,7 +1179,7 @@ window.onload = function () {
         optionsDropdown.classList.remove('hidden');
     });
     searchInput.addEventListener('input', renderDemandOptionsDropdown);
-    
+
     // Clique na área de tags foca no input de busca
     const demandTagsArea = document.getElementById('demandTagsArea');
     if (demandTagsArea) {
@@ -1187,7 +1187,7 @@ window.onload = function () {
             searchInput.focus();
         });
     }
-    
+
     document.addEventListener('click', (e) => {
         if (!customSelect.contains(e.target)) {
             optionsDropdown.classList.add('hidden');
